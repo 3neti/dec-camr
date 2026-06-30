@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Characterization;
+namespace Tests\Feature\LegacyCharacterizationReference;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +47,7 @@ class LegacyBehaviorTest extends LegacyCharacterizationTestCase
 
     public function test_protected_routes_redirect_anonymous_users_to_login(): void
     {
-        foreach (['/site', '/user', '/sap_report', '/site_details/' . $this->fixture['siteAId']] as $uri) {
+        foreach (['/site', '/user', '/sap_report', '/site_details/'.$this->fixture['siteAId']] as $uri) {
             $this->get($uri)
                 ->assertRedirect('/')
                 ->assertSessionHas('fail', 'You Have to Login First');
@@ -81,7 +81,7 @@ class LegacyBehaviorTest extends LegacyCharacterizationTestCase
     public function test_site_detail_page_loads_operational_dashboard_sections(): void
     {
         $this->actingAsLegacyUser($this->fixture['adminId'])
-            ->get('/site_details/' . $this->fixture['siteAId'])
+            ->get('/site_details/'.$this->fixture['siteAId'])
             ->assertOk()
             ->assertSee('SITEA')
             ->assertSee('Gateway')
@@ -92,9 +92,9 @@ class LegacyBehaviorTest extends LegacyCharacterizationTestCase
     public function test_gateway_and_meter_create_validation_and_success_contracts(): void
     {
         $this->actingAsLegacyUser($this->fixture['adminId'])
-            ->from('/site_details/' . $this->fixture['siteAId'])
+            ->from('/site_details/'.$this->fixture['siteAId'])
             ->post('/create_gateway_post', [])
-            ->assertRedirect('/site_details/' . $this->fixture['siteAId'])
+            ->assertRedirect('/site_details/'.$this->fixture['siteAId'])
             ->assertSessionHasErrors([
                 'gateway_sn',
                 'gateway_mac',
@@ -118,9 +118,9 @@ class LegacyBehaviorTest extends LegacyCharacterizationTestCase
         $gatewayId = DB::table('meter_rtu')->where('gateway_sn', 'GW-SN-002')->value('rtu_id');
 
         $this->actingAsLegacyUser($this->fixture['adminId'])
-            ->from('/site_details/' . $this->fixture['siteAId'])
+            ->from('/site_details/'.$this->fixture['siteAId'])
             ->post('/create_meter_post', [])
-            ->assertRedirect('/site_details/' . $this->fixture['siteAId'])
+            ->assertRedirect('/site_details/'.$this->fixture['siteAId'])
             ->assertSessionHasErrors([
                 'meter_name',
                 'meter_model_id',
@@ -154,9 +154,9 @@ class LegacyBehaviorTest extends LegacyCharacterizationTestCase
         Storage::fake('public');
 
         $this->actingAsLegacyUser($this->fixture['adminId'])
-            ->from('/site_details/' . $this->fixture['siteAId'])
+            ->from('/site_details/'.$this->fixture['siteAId'])
             ->post('/import_meters', [])
-            ->assertRedirect('/site_details/' . $this->fixture['siteAId'])
+            ->assertRedirect('/site_details/'.$this->fixture['siteAId'])
             ->assertSessionHasErrors(['csv_file']);
 
         $badCsv = UploadedFile::fake()->createWithContent('meters.csv', "ER-A,MTR-BAD\n");

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Characterization;
+namespace Tests\Feature\LegacyCharacterizationReference;
 
 use Illuminate\Support\Facades\Schema;
 

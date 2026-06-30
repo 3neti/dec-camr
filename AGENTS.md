@@ -18,11 +18,16 @@ Migration rules:
 - Preserve observable behavior, workflows, terminology, validation intent, and operational efficiency.
 - Do not mechanically translate Laravel 8 implementation patterns.
 - Use Laravel 13, Inertia, Vue 3, Pest, and Laravel Boost conventions.
+- A slice is complete only after explicit architect review acceptance, including architecture, naming, Laravel 13 conventions, Vue/Inertia structure, test quality, fixture quality, behavioral compatibility, and unintended modernization checks.
 - Preserve legacy external route behavior unless the architect approves a breaking change.
+- Maintain a migration backlog for unresolved behavioral gaps, implementation questions, and migration risks before slice progression.
 - Recreate test scenarios with Laravel 13 factories, seeders, Pest datasets, and reusable builders rather than importing the Laravel 8 bootstrap wholesale.
 - Track every transferred characterization artifact as `Copied`, `Ported`, `Enabled`, `Passing`, `Blocked`, or `Retired`.
 - `Retired` characterization requires architect approval and a decision-log entry.
+- Apply selective use of Actions for meaningful workflows and meaningful service boundary extraction; avoid trivial wrappers.
+- Apply DTOs only where they clarify boundaries, and only use `spatie/laravel-data` if installed or explicitly approved by the architect.
 - Complete one vertical slice before beginning the next.
+- Do not add dependencies without architect approval.
 
 High-risk modules require extra care and Laravel 8 reference review before implementation: RTU/device endpoints, report/XLSX exports, authorization semantics, destructive CRUD, and DataTables-equivalent behavior.
 

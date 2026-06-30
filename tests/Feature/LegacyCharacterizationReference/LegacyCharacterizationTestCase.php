@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Characterization;
+namespace Tests\Feature\LegacyCharacterizationReference;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -28,7 +28,7 @@ abstract class LegacyCharacterizationTestCase extends TestCase
 
     protected function assertSafeDatabase(): void
     {
-        $database = (string) config('database.connections.' . config('database.default') . '.database');
+        $database = (string) config('database.connections.'.config('database.default').'.database');
 
         $this->assertNotSame('', $database, 'A dedicated test database must be configured.');
         $this->assertMatchesRegularExpression('/(test|testing|characterization)/i', $database, 'Refusing to migrate a database whose name does not look like a test database.');

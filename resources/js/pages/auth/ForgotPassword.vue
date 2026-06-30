@@ -1,66 +1,109 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import TextLink from '@/components/TextLink.vue';
+import { Head, usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { login } from '@/routes';
-import { email } from '@/routes/password';
 
-defineOptions({
-    layout: {
-        title: 'Forgot password',
-        description: 'Enter your email to receive a password reset link',
-    },
-});
-
-defineProps<{
+const props = defineProps<{
     status?: string;
+    error?: string;
+    legacyApplicationTitle?: string;
 }>();
+
+const page = usePage();
+const csrfToken = page.props.csrfToken as string;
+
+const email = ref('');
+const processing = ref(false);
+const successMessage = ref('');
+const validationError = ref('');
+
+const submit = async () => {
+    processing.value = true;
+    validationError.value = '';
+    successMessage.value = '';
+
+    const response = await fetch('/reset-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            Accept: 'application/json',
+        },
+        body: JSON.stringify({ user_email_address: email.value }),
+    });
+
+    const payload = await response.json();
+
+    processing.value = false;
+
+    if (response.status === 422) {
+        validationError.value = payload.errors?.user_email_address?.[0] ?? 'Request failed';
+
+        return;
+    }
+
+    if (!response.ok) {
+        validationError.value = 'Request failed';
+
+        return;
+    }
+
+    successMessage.value = payload.success;
+
+    if (response.status === 200) {
+        email.value = '';
+    }
+};
 </script>
 
 <template>
     <Head title="Forgot password" />
 
-    <div
-        v-if="status"
-        class="mb-4 text-center text-sm font-medium text-green-600"
-    >
-        {{ status }}
-    </div>
+    <div class="flex flex-col gap-4">
+        <h1 class="text-2xl font-semibold">
+            {{ props.legacyApplicationTitle || 'Centralized Automated Meter Reading' }}
+        </h1>
 
-    <div class="space-y-6">
-        <Form v-bind="email.form()" v-slot="{ errors, processing }">
+        <p>Please Enter your Email Address Registered to your CAMR User Account</p>
+
+        <div v-if="status || successMessage" class="text-sm font-medium text-green-600">
+            {{ status || successMessage }}
+        </div>
+
+        <div v-if="error || validationError" class="text-sm font-medium text-red-600">
+            {{ error || validationError }}
+        </div>
+
+        <form class="grid gap-3" @submit.prevent="submit">
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="user_email_address">Email Address</Label>
                 <Input
-                    id="email"
+                    id="user_email_address"
                     type="email"
-                    name="email"
+                    name="user_email_address"
                     autocomplete="off"
                     autofocus
-                    placeholder="email@example.com"
+                    placeholder="Email Address"
+                    v-model="email"
                 />
-                <InputError :message="errors.email" />
             </div>
 
-            <div class="my-6 flex items-center justify-start">
-                <Button
-                    class="w-full"
-                    :disabled="processing"
-                    data-test="email-password-reset-link-button"
-                >
-                    <Spinner v-if="processing" />
-                    Email password reset link
-                </Button>
-            </div>
-        </Form>
+            <Button
+                id="check-email"
+                type="submit"
+                class="w-full"
+                :disabled="processing"
+                data-test="email-password-reset-link-button"
+            >
+                Send
+            </Button>
+        </form>
 
         <div class="space-x-1 text-center text-sm text-muted-foreground">
-            <span>Or, return to</span>
-            <TextLink :href="login()">log in</TextLink>
+            <span>Back to</span>
+            <a href="/">Login</a>
         </div>
     </div>
 </template>
