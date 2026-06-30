@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests\Building;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+final class UpdateBuildingRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        $buildingId = $this->integer('buildingID');
+        $siteId = $this->integer('siteID');
+
+        return [
+            'buildingID' => ['required', 'integer'],
+            'building_code' => ['required', 'string', 'max:255', Rule::unique('meter_building_table')->where(
+                fn ($query) => $query
+                    ->where('building_code', $this->string('building_code'))
+                    ->where('site_idx', $siteId),
+            )->ignore($buildingId, 'building_id')],
+            'building_description' => ['required', 'string', 'max:255', Rule::unique('meter_building_table')->where(
+                fn ($query) => $query
+                    ->where('building_description', $this->string('building_description'))
+                    ->where('site_idx', $siteId),
+            )->ignore($buildingId, 'building_id')],
+            'siteID' => ['required', 'integer'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'buildingID.required' => 'Building is Required',
+            'building_code.required' => 'Building Code is Required',
+            'building_description.required' => 'Building Description is Required',
+            'siteID.required' => 'Site is Required',
+        ];
+    }
+}
