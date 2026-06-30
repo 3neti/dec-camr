@@ -34,6 +34,7 @@ Copied -> Ported -> Enabled -> Passing
 | Legacy dashboard contract tests | `tests/Feature/Characterization/LegacyBehaviorTest.php` | `tests/Feature/DashboardTest.php` | Dashboard | Passing | `/site` legacy protected-route redirect message and authenticated dashboard page rendering are now covered for Slice 2. |
 | Company feature contract tests | `tests/Feature/CompanyTest.php` | `tests/Feature/CompanyTest.php` | Company | Passing | Core company endpoints are now covered for Slice 3 at route, list, and mutation levels. |
 | Legacy division feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Division block) | `tests/Feature/DivisionTest.php` | Division | Passing | Division maintenance contract coverage now targets route, list, create, update, delete behavior at Slice 4 level. |
+| Configuration file feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Configuration File block) | `tests/Feature/ConfigurationFileTest.php` | Configuration | Passing | Configuration file list/create/update/delete contracts are now implemented in Laravel 13 test form for Slice 5. |
 
 ## Current Rule
 
