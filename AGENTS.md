@@ -1,3 +1,31 @@
+# Laravel 8 Reimplementation Mission
+
+This repository is the fresh Laravel 13 reimplementation of the legacy CAMR Laravel 8 app. The legacy reference implementation is available at:
+
+```text
+/Users/rli/PhpstormProjects/camr_robinsons
+```
+
+Before implementing migration work, read:
+
+- `docs/migration/legacy-laravel-8-handoff.md`
+- `docs/migration/legacy-test-inventory.md`
+- `docs/migration/decisions.md`
+
+Migration rules:
+
+- Characterization tests are the primary executable contract.
+- Preserve observable behavior, workflows, terminology, validation intent, and operational efficiency.
+- Do not mechanically translate Laravel 8 implementation patterns.
+- Use Laravel 13, Inertia, Vue 3, Pest, and Laravel Boost conventions.
+- Preserve legacy external route behavior unless the architect approves a breaking change.
+- Recreate test scenarios with Laravel 13 factories, seeders, Pest datasets, and reusable builders rather than importing the Laravel 8 bootstrap wholesale.
+- Track every transferred characterization artifact as `Copied`, `Ported`, `Enabled`, `Passing`, `Blocked`, or `Retired`.
+- `Retired` characterization requires architect approval and a decision-log entry.
+- Complete one vertical slice before beginning the next.
+
+High-risk modules require extra care and Laravel 8 reference review before implementation: RTU/device endpoints, report/XLSX exports, authorization semantics, destructive CRUD, and DataTables-equivalent behavior.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
@@ -122,13 +150,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - The application is served by Laravel Herd at `https?://[kebab-case-project-dir].test`. Use the `get-absolute-url` tool to generate valid URLs. Never run commands to serve the site. It is always available.
 - Use the `herd` CLI to manage services, PHP versions, and sites (e.g. `herd sites`, `herd services:start <service>`, `herd php:list`). Run `herd list` to discover all available commands.
-
-=== tests rules ===
-
-# Test Enforcement
-
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
 
 === inertia-laravel/core rules ===
 
