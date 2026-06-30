@@ -222,7 +222,7 @@ Follow-up (if any):
 ## Final Release Authorization (Slice 18)
 
 Status:
-- Deferred
+- Blocked
 
 Affected Slice(s):
 - Slice 13 — Authorization Semantics
@@ -233,16 +233,26 @@ Affected Slice(s):
 - Slice 18 — Backlog Cleanup / Release Readiness
 
 Summary:
-- Pending completion of all remaining hardening slices and closure of release-affecting residual risk.
+- Governance reconciliation is in progress. Slice 18 reconciles open residuals across `MIG-004`, `MIG-005`, `MIG-007`, `MIG-009`, and residual behavior differences under `MIG-001`.
+- Production authorization remains blocked by the unresolved residuals listed below.
 
 Evidence:
-- Pending.
+- `docs/migration/release-readiness.md`
+- `docs/migration/backlog.md`
+- `docs/migration/decisions.md`
+- `docs/migration/legacy-test-inventory.md`
 
 Residual Risk:
-- Any unresolved critical behavior gap in security, data integrity, reporting, or RTU interoperability.
+- Open or residual high-risk items:
+  - `MIG-004` (delete behavior response edge case for missing IDs remains unresolved)
+  - `MIG-005` (DataTables search/sort/pagination/action parity needs continued closure)
+  - `MIG-007` (user site-access mutation side effects remain partially validated)
+  - `MIG-009` (legacy slice-order/preview-scope reconciliation)
+  - `MIG-001` residual malformed-payload/idempotency behavior remains documented
+  - `MIG-006` / `MIG-008` remain open baseline migration questions
 
 Decision:
-- Pending
+- Deferred
 
 Release Impact:
 - Migration is not yet approved for production.
@@ -251,7 +261,7 @@ Owner:
 - Architect / Team (to be recorded)
 
 Follow-up (if any):
-- Fill this entry after Slice 18 governance pass and evidence review.
+- Fill this entry when residual decisions are closed and final migration evidence is accepted by the architect.
 
 ## 2026-06-30 — Reports Slice 16 Hardening Evidence Added
 
@@ -389,6 +399,39 @@ Owner:
 
 Follow-up (if any):
 - Decide whether duplicate-post and malformed-input outcomes remain acceptable under legacy protocol behavior and close residuals under `MIG-001` as "accepted with residual differences" or continue hardening.
+
+## 2026-07-01 — Begin Slice 18 — Backlog Cleanup / Release Readiness
+
+Status:
+- In Review
+
+Affected Slice(s):
+- Slice 18 — Backlog Cleanup / Release Readiness
+
+Summary:
+- Transitioned to governance and release-hardening work after Slice 17 approval.
+- Scope is constrained to backlog reconciliation, residual-risk visibility, and final release-readiness verification.
+
+Evidence:
+- `docs/migration/release-readiness.md` and `docs/migration/backlog.md` governance state.
+- `docs/migration/decisions.md` migration compass and scope transition.
+- No implementation changes are part of this slice.
+
+Residual Risk:
+- Residual backlog/risk items remain open (`MIG-004`, `MIG-005`, `MIG-007`, `MIG-009`, and residual differences from `MIG-001`).
+- Cross-slice release authorization dependencies remain unresolved until final governance closure.
+
+Decision:
+- In Review
+
+Release Impact:
+- Migration is now in release-readiness hardening phase and not yet eligible for final release authorization.
+
+Owner:
+- Codex
+
+Follow-up (if any):
+- Close residual risk decisions and update Final Release Authorization status in this log after Slice 18 completion.
 
 ## 2026-07-01 — RTU Device Endpoints Release Decision (Slice 17)
 

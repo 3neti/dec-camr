@@ -57,6 +57,48 @@ Consequences:
 Characterization impact:
 - RTU contract coverage is now both scope-complete and gate-passing for released migration progression, with residual ambiguity captured for malformed-payload and duplicate-post idempotency behavior.
 
+## 2026-07-01 - Begin Slice 18 — Backlog Cleanup / Release Readiness
+
+Status: Approved
+Owner: Codex
+Slice: Cross-cutting
+
+Decision:
+Authorize transition to Slice 18 and begin production-readiness governance cleanup.
+
+Context:
+- Slice 17 is approved with `MIG-001` residual risk posture.
+- Remaining migration work is now cross-cutting cleanup: backlog reconciliation, release evidence alignment, and final risk closure.
+
+Consequences:
+- Cross-slice governance artifacts should be updated to close residual differences for `MIG-004`, `MIG-005`, `MIG-007`, `MIG-009`, and residual `MIG-001` items where still applicable.
+- `docs/migration/release-readiness.md` Slice 18 status is now set to `In Review`.
+- Implementation for feature migration should not start until slice cleanup scope is complete and reviewed.
+
+Characterization impact:
+- Slice 18 is a governance/production-readiness slice and will not implement new user-facing functional endpoints.
+
+## 2026-07-01 - Slice 18 Reconciliation Executed
+
+Status: Approved
+Owner: Codex
+Slice: Cross-cutting
+
+Decision:
+Execute Slice 18 backlog/release-readiness reconciliation.
+
+Context:
+- Remaining migration risk posture is concentrated in residuals (`MIG-004`, `MIG-005`, `MIG-006`, `MIG-007`, `MIG-008`, `MIG-009`, and residual behavior under `MIG-001`).
+- Full feature development is complete through Slice 17 with Slice 17 approved and residuals tracked.
+
+Consequences:
+- Updated release-readiness governance to track Slice 12 as formally approved and expanded Slice 18 residual scope.
+- Reconciled backlog/residual posture by setting `MIG-001` to accepted-with-residual-differences and `MIG-004` to accepted-with-residual-differences.
+- Reaffirmed final release readiness dependency that `Final Release Authorization` remains deferred/blocked until residual decisions are closed.
+
+Characterization impact:
+- Slice 18 is complete as governance cleanup; no application feature tests are added in this step.
+
 ## 2026-06-30 - Exclude Preview Gateway/Meter Tests From Default Pest Runs
 
 Status: Superseded
