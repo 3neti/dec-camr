@@ -242,3 +242,25 @@ Consequences:
 
 Characterization impact:
 - Inventory status for these domains must remain non-complete (for example, `Blocked`) until formal slice acceptance.
+
+## 2026-06-30 - Promote Meter Slice to Official Slice 10 Migration Status
+
+Status: Approved
+Owner: Codex
+Slice: Meter
+
+Decision:
+Promote Meter from preview to official Slice 10 implementation and execute `tests/Feature/MeterTest.php` as active feature contract coverage.
+
+Context:
+- Meter routes and endpoints were scaffolded but not yet wired into the active legacy middleware route set.
+- Meter behavior has explicit legacy contract coverage in `tests/Feature/MeterTest.php` for page rendering, list endpoint payload contracts, create/update/delete/info, and CSV import behavior.
+- The user has authorized Slice 10 execution.
+
+Consequences:
+- Meter routes (`/meter`, `/getMeter`, `/create_meter_post`, `/meter_info`, `/update_meter_post`, `/delete_meter_confirmed`, `/import_meters`) are now active in `routes/web.php`.
+- `MeterTest` is no longer preview-gated and participates in the full suite execution path.
+- `docs/migration/legacy-test-inventory.md` Meter row is now marked `Passing`.
+
+Characterization impact:
+- Meter slice behavior is no longer placeholder-only and is now an official part of this migration pass.

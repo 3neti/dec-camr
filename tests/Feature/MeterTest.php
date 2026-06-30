@@ -10,7 +10,6 @@ use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
-    $this->markTestSkipped('Meter slice is preview-only and not yet officially migrated.');
     $this->site = Site::factory()->create([
         'site_code' => 'SITEA',
         'building_description' => 'Meter Test Building',

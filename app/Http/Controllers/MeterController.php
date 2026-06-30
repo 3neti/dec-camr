@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Actions\Meter\CreateMeterAction;
 use App\Actions\Meter\DeleteMeterAction;
 use App\Actions\Meter\GetMeterAction;
+use App\Actions\Meter\ImportMetersAction;
 use App\Actions\Meter\ListMetersAction;
 use App\Actions\Meter\UpdateMeterAction;
 use App\Http\Requests\Meter\CreateMeterRequest;
+use App\Http\Requests\Meter\ImportMetersRequest;
 use App\Http\Requests\Meter\UpdateMeterRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,6 +22,7 @@ final class MeterController extends Controller
         private readonly CreateMeterAction $createMeterAction,
         private readonly UpdateMeterAction $updateMeterAction,
         private readonly DeleteMeterAction $deleteMeterAction,
+        private readonly ImportMetersAction $importMetersAction,
     ) {}
 
     public function meter()
@@ -122,5 +125,16 @@ final class MeterController extends Controller
         }
 
         return response()->json('Deleted', 200);
+    }
+
+    public function importMeters(ImportMetersRequest $request)
+    {
+        return response()->json($this->importMetersAction->execute(
+            (int) $request->integer('import_gateway_idx'),
+            (int) $request->integer('import_gateway_site_idx'),
+            (string) $request->string('import_gateway_site_code'),
+            $request->file('csv_file'),
+            (int) session('loginID', 0),
+        ));
     }
 }

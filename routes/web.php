@@ -6,6 +6,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ConfigurationFileController;
 use App\Http\Controllers\DivisionController;
 use App\Http\Controllers\GatewayController;
+use App\Http\Controllers\MeterController;
 use App\Http\Controllers\MeterLocationController;
 use App\Http\Controllers\SiteController;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
@@ -71,6 +72,14 @@ Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
     Route::post('/gateway_info', [GatewayController::class, 'gatewayInfo'])->name('gateway_info');
     Route::post('/update_gateway_post', [GatewayController::class, 'updateGatewayPost'])->name('UPDATE_GATEWAY');
     Route::post('/delete_gateway_confirmed', [GatewayController::class, 'deleteGatewayConfirmed'])->name('DeleteGateway');
+
+    Route::get('/meter', [MeterController::class, 'meter'])->name('meter');
+    Route::get('/getMeter', [MeterController::class, 'meterList'])->name('getMeter');
+    Route::post('/create_meter_post', [MeterController::class, 'createMeterPost'])->name('CREATE_METER_INFO');
+    Route::post('/meter_info', [MeterController::class, 'meterInfo'])->name('meter_info');
+    Route::post('/update_meter_post', [MeterController::class, 'updateMeterPost'])->name('UPDATE_METER_INFO');
+    Route::post('/delete_meter_confirmed', [MeterController::class, 'deleteMeterConfirmed'])->name('DeleteMeter');
+    Route::post('/import_meters', [MeterController::class, 'importMeters'])->name('import_meters');
 
     Route::post('/getMeterLocation', [MeterLocationController::class, 'getMeterLocation'])->name('getMeterLocation');
     Route::post('/create_meter_location_post', [MeterLocationController::class, 'createMeterLocationPost'])->name('CREATE_METER_LOCATION_INFO');
