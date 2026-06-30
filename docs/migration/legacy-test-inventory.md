@@ -33,6 +33,7 @@ Copied -> Ported -> Enabled -> Passing
 | Legacy authentication contract tests | `tests/Feature/Characterization/LegacyBehaviorTest.php` | `tests/Feature/LegacyCharacterizationReference/LegacyAuthenticationTest.php` | Authentication | Passing | Covers Slice 1 auth behavior; 8 auth coverage tests currently passing in the auth slice command. Architect acceptance is still required before Slice 1 is treated as complete. Full suite now executes without route failures; remaining skips are deferred legacy namespace/test-bootstrap artifacts. |
 | Legacy dashboard contract tests | `tests/Feature/Characterization/LegacyBehaviorTest.php` | `tests/Feature/DashboardTest.php` | Dashboard | Passing | `/site` legacy protected-route redirect message and authenticated dashboard page rendering are now covered for Slice 2. |
 | Company feature contract tests | `tests/Feature/CompanyTest.php` | `tests/Feature/CompanyTest.php` | Company | Passing | Core company endpoints are now covered for Slice 3 at route, list, and mutation levels. |
+| Legacy division feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Division block) | `tests/Feature/DivisionTest.php` | Division | Passing | Division maintenance contract coverage now targets route, list, create, update, delete behavior at Slice 4 level. |
 
 ## Current Rule
 

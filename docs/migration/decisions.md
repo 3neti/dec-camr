@@ -51,6 +51,27 @@ Characterization impact:
 - Slice 3 feature coverage now includes the company contract at endpoint level.
 - Browser characterization remains a reference artifact and is not enabled yet.
 
+## 2026-06-30 - Preserve Legacy Division Maintenance Endpoint Contract for Slice 4
+
+Status: Proposed
+Owner: Codex
+Slice: Division
+
+Decision:
+Preserve the legacy division maintenance route and payload surface (`/division`, `/division_list`, `/create_division_post`, `/division_info`, `/update_division_post`, `/delete_division_confirmed`) with legacy field names such as `DivisionID`, while implementing this slice in Laravel 13 using dedicated actions, form requests, and an explicit division model.
+
+Context:
+- Division behavior in the Laravel 8 app is structurally equivalent to company maintenance with additional division-code/name validation and action identifiers.
+- Destructive workflows for division data are migration-sensitive and must remain contract-compatible for later navigation and browser behavior.
+
+Consequences:
+- Division list endpoint responses should keep legacy `action` anchors with `editDivision` and `deleteDivision` ids.
+- Validation messages for required `division_code` and `division_name` remain business-visible legacy text.
+- Division create/update success messages remain legacy-compatible.
+
+Characterization impact:
+- Slice 4 feature tests should use legacy field names and endpoint names in order to preserve migration behavior during downstream slice development.
+
 ## 2026-06-30 - Slice 2 Dashboard Entry Surface
 
 Status: Approved

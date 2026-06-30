@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LegacyAuthController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\DivisionController;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -32,6 +33,13 @@ Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
     Route::post('/company_info', [CompanyController::class, 'companyInfo'])->name('company_info');
     Route::post('/update_company_post', [CompanyController::class, 'updateCompanyPost'])->name('update_company_post');
     Route::post('/delete_company_confirmed', [CompanyController::class, 'deleteCompanyConfirmed'])->name('delete_company_confirmed');
+
+    Route::get('/division', [DivisionController::class, 'division'])->name('division');
+    Route::post('/division_list', [DivisionController::class, 'divisionList'])->name('DivisionList');
+    Route::post('/create_division_post', [DivisionController::class, 'createDivisionPost'])->name('create_division_post');
+    Route::post('/division_info', [DivisionController::class, 'divisionInfo'])->name('division_info');
+    Route::post('/update_division_post', [DivisionController::class, 'updateDivisionPost'])->name('update_division_post');
+    Route::post('/delete_division_confirmed', [DivisionController::class, 'deleteDivisionConfirmed'])->name('delete_division_confirmed');
 });
 
 require __DIR__.'/settings.php';
