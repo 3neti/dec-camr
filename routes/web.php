@@ -5,8 +5,6 @@ use App\Http\Controllers\BuildingController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ConfigurationFileController;
 use App\Http\Controllers\DivisionController;
-use App\Http\Controllers\GatewayController;
-use App\Http\Controllers\MeterController;
 use App\Http\Controllers\SiteController;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
 use Illuminate\Support\Facades\Route;
@@ -65,22 +63,6 @@ Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
     Route::post('/delete_building_confirmed', [BuildingController::class, 'deleteBuildingConfirmed'])->name('DeleteBuildingInfo');
     Route::post('/get_building_accordion', [BuildingController::class, 'getBuildingAccordion'])->name('get_building_accordion');
 
-    Route::get('/gateway', [GatewayController::class, 'gateway'])->name('gateway');
-    Route::get('/getGateway', [GatewayController::class, 'gatewayList'])->name('getGateway');
-    Route::get('/getGatewayPerBLGandEEROOM', [GatewayController::class, 'gatewayPerBuildingOrRoom'])->name('getGatewayPerBLGandEEROOM');
-    Route::post('/gateway_info', [GatewayController::class, 'gatewayInfo'])->name('gateway_info');
-    Route::post('/create_gateway_post', [GatewayController::class, 'createGatewayPost'])->name('create_gateway_post');
-    Route::post('/update_gateway_post', [GatewayController::class, 'updateGatewayPost'])->name('update_gateway_post');
-    Route::post('/delete_gateway_confirmed', [GatewayController::class, 'deleteGatewayConfirmed'])->name('delete_gateway_confirmed');
-    Route::post('/import_meters', [GatewayController::class, 'importMeters'])->name('import_meters');
-
-    Route::get('/meter', [MeterController::class, 'meter'])->name('meter');
-    Route::get('/getMeter', [MeterController::class, 'meterList'])->name('getMeter');
-    Route::get('/getMetersPerGateway', [MeterController::class, 'meterPerGateway'])->name('getMetersPerGateway');
-    Route::post('/meter_info', [MeterController::class, 'meterInfo'])->name('MeterInfo');
-    Route::post('/create_meter_post', [MeterController::class, 'createMeterPost'])->name('CREATE_METER_INFO');
-    Route::post('/update_meter_post', [MeterController::class, 'updateMeterPost'])->name('UPDATE_METER_INFO');
-    Route::post('/delete_meter_confirmed', [MeterController::class, 'deleteMeterConfirmed'])->name('DeleteMeterInfo');
 });
 
 require __DIR__.'/settings.php';
