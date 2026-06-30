@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LegacyAuthController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,6 +23,15 @@ Route::get('/site', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+});
+
+Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
+    Route::get('/company', [CompanyController::class, 'company'])->name('company');
+    Route::post('/company_list', [CompanyController::class, 'companyList'])->name('CompanyList');
+    Route::post('/create_company_post', [CompanyController::class, 'createCompanyPost'])->name('create_company_post');
+    Route::post('/company_info', [CompanyController::class, 'companyInfo'])->name('company_info');
+    Route::post('/update_company_post', [CompanyController::class, 'updateCompanyPost'])->name('update_company_post');
+    Route::post('/delete_company_confirmed', [CompanyController::class, 'deleteCompanyConfirmed'])->name('delete_company_confirmed');
 });
 
 require __DIR__.'/settings.php';

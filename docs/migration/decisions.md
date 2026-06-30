@@ -30,6 +30,27 @@ Characterization impact:
 
 ## Decisions
 
+## 2026-06-30 - Preserve Legacy Company Maintenance Endpoint Contract for Slice 3
+
+Status: Approved
+Owner: Codex
+Slice: Company
+
+Decision:
+Preserve the Laravel 8 company maintenance route surface and payload contract (`/company`, `/company_list`, `/create_company_post`, `/company_info`, `/update_company_post`, `/delete_company_confirmed`) with legacy field names such as `CompanyID`, while implementing the slice in Laravel 13 with a thin controller, form requests, and dedicated company actions.
+
+Context:
+- Company maintenance in the legacy app exposes AJAX-style endpoints with legacy keys and mutation messages.
+- Subsequent slices depend on company data and reference identifiers.
+
+Consequences:
+- Company list responses include legacy `action` anchor markers expected by characterization browser scripts (`editCompany`, `deleteCompany`).
+- Validation messages for `company_name` remain business-visible legacy text where present.
+
+Characterization impact:
+- Slice 3 feature coverage now includes the company contract at endpoint level.
+- Browser characterization remains a reference artifact and is not enabled yet.
+
 ## 2026-06-30 - Slice 2 Dashboard Entry Surface
 
 Status: Approved
