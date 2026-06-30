@@ -9,11 +9,13 @@ use App\Http\Controllers\GatewayController;
 use App\Http\Controllers\MeterController;
 use App\Http\Controllers\MeterLocationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RtuProtocolController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserSiteAccessController;
 use App\Http\Middleware\EnsureLegacyAdmin;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 
@@ -26,6 +28,18 @@ Route::post('/reset-password', [LegacyAuthController::class, 'requestTemporaryPa
 Route::post('/password-update', [NewPasswordController::class, 'store'])
     ->middleware('guest:'.config('fortify.guard'))
     ->name('password.update');
+
+Route::get('/check_time.php', [RtuProtocolController::class, 'checkTime'])->name('rtu.check_time');
+Route::post('/http_post_server.php', [RtuProtocolController::class, 'httpPostServer'])->withoutMiddleware([VerifyCsrfToken::class]);
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/get_update_csv', [RtuProtocolController::class, 'getUpdateCsv'])->name('rtu.get_update_csv');
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/get_content_csv', [RtuProtocolController::class, 'getContentCsv'])->name('rtu.get_content_csv');
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/reset_update_csv', [RtuProtocolController::class, 'resetUpdateCsv'])->name('rtu.reset_update_csv');
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/get_update_location', [RtuProtocolController::class, 'getUpdateLocation'])->name('rtu.get_update_location');
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/get_content_location', [RtuProtocolController::class, 'getContentLocation'])->name('rtu.get_content_location');
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/reset_update_location', [RtuProtocolController::class, 'resetUpdateLocation'])->name('rtu.reset_update_location');
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/rtu_remote_ssh', [RtuProtocolController::class, 'getRemoteSshFlag'])->name('rtu.remote_ssh');
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/force_lp', [RtuProtocolController::class, 'getForceLoadProfile'])->name('rtu.force_lp');
+Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/reset_force_lp', [RtuProtocolController::class, 'resetForceLoadProfile'])->name('rtu.reset_force_lp');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');

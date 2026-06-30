@@ -30,10 +30,32 @@ Characterization impact:
 
 ## Migration Compass (Current Slice Pointer)
 
-- Last approved slice: `User Management` (Slice 11)
-- Current authorized scope: `Reports` (Slice 12)
+- Last approved slice: `RTU / Device Endpoints` (Slice 17)
+- Current authorized scope: `Backlog Cleanup / Release Readiness` (Slice 18)
 
 ## Decisions
+
+## 2026-07-01 - RTU / Device Endpoints Slice 17 Approved
+
+Status: Approved
+Owner: Codex
+Slice: RTU / Device Endpoints
+
+Decision:
+Accept Slice 17 as complete for migration progression with `MIG-001` set to `Accepted with Residual Differences`.
+
+Context:
+- `POST /http_post_server.php` telemetry ingress is implemented in `RtuProtocolController` and covered by `tests/Feature/RtuProtocolTest.php`.
+- `public/http_post_server.php` is documented as the authoritative legacy ingress path for device telemetry behavior.
+- Safe protocol endpoints and telemetry branch effects are now tested and green under full acceptance gates.
+
+Consequences:
+- `docs/migration/backlog.md` MIG-001 status is now `Accepted with Residual Differences`.
+- `docs/migration/release-readiness.md` Slice 17 status is now `Approved`.
+- Slice 18 governance work is now the next authorized slice.
+
+Characterization impact:
+- RTU contract coverage is now both scope-complete and gate-passing for released migration progression, with residual ambiguity captured for malformed-payload and duplicate-post idempotency behavior.
 
 ## 2026-06-30 - Exclude Preview Gateway/Meter Tests From Default Pest Runs
 
@@ -435,3 +457,48 @@ Consequences:
 Characterization impact:
 - `tests/Feature/ReportTest.php` is now the migration-complete representative characterization artifact for Slice 16.
 - `docs/migration/legacy-test-inventory.md` report row remains `Passing` with explicit residual-work notes.
+
+## 2026-07-01 - Begin RTU / Device Endpoints Slice (Protocol-First)
+
+Status: Proposed
+Owner: Codex
+Slice: RTU / Device Endpoints
+
+Decision:
+Proceed into Slice 17 as a protocol-first phase using contract characterization and safe endpoint implementation only.
+
+Context:
+- `docs/migration/rtu-protocol-inventory.md` already captured endpoint contracts and protocol uncertainties.
+- The slice requires protocol-safe compatibility for status/content/reset surfaces before full telemetry implementation.
+- `MIG-001` remains open because direct telemetry side-effect parity (`http_post_server.php`) is not yet addressed.
+
+Consequences:
+- Implemented tests in `tests/Feature/RtuProtocolTest.php` for check time, status checks, CSV/location content, reset, SSH, and force-load flag endpoints.
+- Added protocol-safe RTU routes and controller implementation for those endpoints in `routes/web.php` and `app/Http/Controllers/RtuProtocolController.php`.
+- `MIG-001` remains `Open` until telemetry side effects and transport strategy are completed and documented.
+
+Characterization impact:
+- Slice 17 is formally entered and gated at protocol characterization level; telemetry ingress is deferred to Phase 3 with explicit backlog continuity.
+
+## 2026-07-01 - RTU Telemetry Ingestion Source of Truth
+
+Status: Approved
+Owner: Codex
+Slice: RTU / Device Endpoints
+
+Decision:
+Treat `public/http_post_server.php` as the authoritative ingress path for RTU telemetry in Slice 17.
+
+Context:
+- Legacy reference inspection shows two telemetry entry points: `CAMRGatewayDeviceController::http_post_server()` and `public/http_post_server.php`.
+- The direct script performs both `meter_data` insert and downstream updates (`meter_rtu`, `meter_details`, `meter_site`) only when `save_to_meter_data == 1`, and returns `OK, YYYY-MM-DD HH:MM:SS`.
+- The controller method includes an additional branch that inserts into `meter_data` when the flag is not `1` and omits gateway/meter existence checks that the direct script also omits.
+- Devices in legacy environments historically post to `http_post_server.php` URLs, so protocol compatibility should follow that route contract.
+
+Consequences:
+- `POST /http_post_server.php` is implemented to mirror direct-script behavior.
+- `public/http_post_server.php` side effects are preserved for `save_to_meter_data == 1` and acknowledged without failure for malformed/missing identifiers.
+- Request/response framing remains plain text and non-JSON with unchanged shape.
+
+Characterization impact:
+- Phase 2 RTU protocol tests now include telemetry payload acceptance, DB insert + side effects for flagged payloads, and no-op/acknowledgment behavior for zero/partial inputs.

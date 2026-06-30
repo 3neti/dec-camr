@@ -287,3 +287,141 @@ Owner:
 
 Follow-up (if any):
 - Add explicit legacy comparison fixtures and workbook content assertions for each report family, then update this decision for final release posture.
+
+## 2026-07-01 — RTU Device Endpoints Progress Update (Phase 1)
+
+Status:
+- In Review
+
+Affected Slice(s):
+- Slice 17 — RTU / Device Endpoints
+
+Summary:
+- Protocol-first Phase 1 implemented: contract tests added and status/content/reset/flag endpoints are now executable with plain-text protocol responses.
+- Safe endpoint order completed for `/check_time.php` and `/rtu/index.php/rtu/rtu_check_update/{mac}/*` surfaces.
+- Telemetry ingestion (`http_post_server.php` and equivalent Laravel action behavior) remains outside this phase.
+
+Evidence:
+- `tests/Feature/RtuProtocolTest.php` covers check-time, get/update flag endpoints, content endpoints, reset endpoints, SSH flag, and force-load-profile flag behavior.
+- `app/Http/Controllers/RtuProtocolController.php` and public RTU routes are in place.
+- `php artisan test --compact` and frontend checks are pending for this slice.
+
+Residual Risk:
+- `MIG-001` remains open for direct telemetry side effects and exact transport compatibility for RTU POST ingestion.
+
+Decision:
+- In Review
+
+Release Impact:
+- Production release is still blocked until telemetry compatibility and full endpoint parity are validated in later phases.
+
+Owner:
+- Codex
+
+Follow-up (if any):
+- Proceed to Phase 3 with telemetry contracts (`http_post_server.php`) before RTU release acceptance.
+
+## 2026-07-01 — RTU Device Endpoints Progress Update (Phase 2)
+
+Status:
+- In Review
+
+Affected Slice(s):
+- Slice 17 — RTU / Device Endpoints
+
+Summary:
+- `POST /http_post_server.php` is implemented and contract-tested as Phase 2 telemetry ingress.
+- `public/http_post_server.php` is selected as the authoritative legacy device pathway for telemetry behavior.
+
+Evidence:
+- `tests/Feature/RtuProtocolTest.php` includes valid payload, meter_data insert, `save_to_meter_data` branching, side-effect updates, and malformed/missing-reference behavior assertions.
+- `app/Http/Controllers/RtuProtocolController.php` updates `meter_data`, `meter_rtu`, `meter_details`, and `meter_site` in compatibility mode for `save_to_meter_data = 1`.
+
+Residual Risk:
+- Non-fatal protocol ambiguities remain around malformed payload strictness and duplicate-post idempotency expectations that are not fully characterized by legacy PHP script behavior.
+
+Decision:
+- In Review
+
+Release Impact:
+- RTU endpoints now remove the telemetry-critical blocker for Slice 17 technical completion; release readiness remains gated by residual protocol ambiguity review.
+
+Owner:
+- Codex
+
+Follow-up (if any):
+- Formalize duplicate-post and malformed-payload semantics in `docs/migration/backlog.md` or existing slice-level decision artifacts before final `MIG-001` closure.
+
+
+## 2026-07-01 — RTU Device Endpoints Phase 2 Verification Completed
+
+Status:
+- In Review
+
+Affected Slice(s):
+- Slice 17 — RTU / Device Endpoints
+
+Summary:
+- `POST /http_post_server.php` now has contract tests and implementation for legacy telemetry behavior.
+- `public/http_post_server.php` is the authoritative ingress source for RTU telemetry compatibility in this migration.
+- `save_to_meter_data` controls `meter_data` insert and downstream `meter_rtu` / `meter_details` / `meter_site` side effects.
+- Plain-text `OK, YYYY-MM-DD HH:MM:SS` response and non-JSON framing are preserved.
+
+Evidence:
+- `php artisan test --compact tests/Feature/RtuProtocolTest.php`
+- `php artisan test --compact`
+- `vendor/bin/pint --dirty --format agent`
+- `npm run lint:check`
+- `npm run types:check`
+
+Residual Risk:
+- Exact strictness for malformed payloads and duplicate-post idempotency behavior is not fully resolved.
+- Some legacy controller behavior in `CAMRGatewayDeviceController::http_post_server()` remains non-authoritative and intentionally not mirrored because protocol behavior appears to be sourced from `public/http_post_server.php`.
+
+Decision:
+- In Review
+
+Release Impact:
+- RTU slice 17 is no longer blocked by missing telemetry ingress implementation, but remains in review for residual protocol risks.
+
+Owner:
+- Codex
+
+Follow-up (if any):
+- Decide whether duplicate-post and malformed-input outcomes remain acceptable under legacy protocol behavior and close residuals under `MIG-001` as "accepted with residual differences" or continue hardening.
+
+## 2026-07-01 — RTU Device Endpoints Release Decision (Slice 17)
+
+Status:
+- Accepted with residual differences
+
+Affected Slice(s):
+- Slice 17 — RTU / Device Endpoints
+
+Summary:
+- Phase 2 telemetry ingestion and safe protocol endpoints are now implemented and contract-tested.
+- `public/http_post_server.php` is the authoritative legacy ingress behavior for migration parity.
+- `POST /http_post_server.php` preserves plain-text `OK, YYYY-MM-DD HH:MM:SS` responses and expected side-effect branching for `save_to_meter_data`.
+
+Evidence:
+- `tests/Feature/RtuProtocolTest.php` (safe endpoint coverage + telemetry branching/side-effect tests)
+- `php artisan test --compact tests/Feature/RtuProtocolTest.php`
+- `php artisan test --compact`
+- `vendor/bin/pint --dirty --format agent`
+- `npm run lint:check`
+- `npm run types:check`
+
+Residual Risk:
+- Exact malformed-payload strictness and duplicate-post idempotency behavior are still residual and non-blocking for approved progression.
+
+Decision:
+- Accepted with residual differences
+
+Release Impact:
+- Slice 17 is approved for migration progression; residual protocol risks are documented and tracked under `MIG-001`.
+
+Owner:
+- Codex
+
+Follow-up (if any):
+- Continue targeted residual-risk characterization for malformed payload acceptance/duplicate-post behavior in the ongoing hardening backlog process.

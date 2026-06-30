@@ -18,5 +18,5 @@
 | 14 | DataTables Behavior Parity | MIG-005 | In Review | Yes | Pending | List endpoints and tests were implemented for draw/search/pagination/count behavior. Slice 14 remains under release-review while route/action semantics remain monitored for deferred ambiguities. |
 | 15 | Destructive CRUD Hardening | MIG-004 | Approved | Yes | Approved | Delete hardening, dependency-blocked guards, and transaction boundaries are implemented and green on full gates. Missing/nonexistent-ID cleanup remains in MIG-004 and does not block Slice 15 approval. |
 | 16 | Reports Hardening | MIG-002 | Approved | Yes | Approved | Representative report behavior validated. Residual workbook parity improvements tracked under MIG-002. |
-| 17 | RTU / Device Endpoints | MIG-001 | Pending | No | Pending | Not started; protocol and side-effect contracts remain critical. |
+| 17 | RTU / Device Endpoints | MIG-001 | Approved | Yes | Approved | Safe protocol endpoints and `POST /http_post_server.php` telemetry compatibility are implemented and test-covered; residual protocol ambiguity remains around malformed payload strictness and idempotency details, tracked under `MIG-001` as residual differences. |
 | 18 | Backlog Cleanup / Release Readiness | MIG-009 (and any residual items) | Pending | No | Pending | Not started; close governance gaps and confirm final readiness criteria. |

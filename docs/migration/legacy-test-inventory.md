@@ -41,6 +41,7 @@ Copied -> Ported -> Enabled -> Passing
 | Legacy meter feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Meter block) | `tests/Feature/MeterTest.php` | Meter | Passing | Meter route/list/create/info/update/delete/import contracts are now officially covered for Slice 10. |
 | Legacy meter location feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Meter Location block) | `tests/Feature/MeterLocationTest.php` | Meter Location | Passing | Meter location list/create/info/update/delete and location-accordion endpoints are now covered for Slice 8; contracts match legacy payload, action anchor ids, and required validation messages. |
 | Legacy user feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (User block) | `tests/Feature/UserTest.php` | User Management | Passing | Core user endpoints and user-site access workflows are covered at slice level with passing feature tests, including non-admin forbidden route assertions introduced in Slice 13 hardening. |
+| RTU protocol contract tests | `docs/migration/rtu-protocol-inventory.md` + Slice 17 protocol characterization | `tests/Feature/RtuProtocolTest.php` | RTU / Device Endpoints | Passing | Phase 1 + Phase 2 `POST /http_post_server.php` telemetry tests cover `check_time.php`, safe endpoints (`/check_time.php`, update flags/content/reset, `rtu_remote_ssh`, `force_lp`), and POST telemetry side effects. |
 
 ## Current Rule
 
