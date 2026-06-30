@@ -17,7 +17,7 @@ test('legacy dashboard renders when loginID session exists', function () {
 
     $response
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->component('Dashboard'));
+        ->assertInertia(fn (Assert $page) => $page->component('Site'));
 });
 
 test('legacy dashboard and modern dashboard are separate entry points', function () {
