@@ -39,6 +39,7 @@ Copied -> Ported -> Enabled -> Passing
 | Legacy gateway feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Gateway block) | `tests/Feature/GatewayTest.php` | Gateway | Passing | Gateway maintenance route/list/create/info/update/delete contracts are now officially migrated and tests are active. |
 | Legacy meter feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Meter block) | `tests/Feature/MeterTest.php` | Meter | Passing | Meter route/list/create/info/update/delete/import contracts are now officially covered for Slice 10. |
 | Legacy meter location feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Meter Location block) | `tests/Feature/MeterLocationTest.php` | Meter Location | Passing | Meter location list/create/info/update/delete and location-accordion endpoints are now covered for Slice 8; contracts match legacy payload, action anchor ids, and required validation messages. |
+| Legacy user feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (User block) | `tests/Feature/UserTest.php` | User Management | Passing | Core user endpoints and user-site access workflows are now covered at slice level with passing feature tests. |
 
 ## Current Rule
 

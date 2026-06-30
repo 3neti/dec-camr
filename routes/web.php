@@ -9,6 +9,8 @@ use App\Http\Controllers\GatewayController;
 use App\Http\Controllers\MeterController;
 use App\Http\Controllers\MeterLocationController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserSiteAccessController;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -87,6 +89,16 @@ Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
     Route::post('/meter_location_info', [MeterLocationController::class, 'meterLocationInfo'])->name('MeterLocationInfo');
     Route::post('/delete_meter_location_confirmed', [MeterLocationController::class, 'deleteMeterLocationConfirmed'])->name('DeleteMeterLocationInfo');
     Route::post('/get_ee_room_location_accordion', [MeterLocationController::class, 'getEeRoomLocationAccordion'])->name('get_ee_room_location_accordion');
+
+    Route::get('/user', [UserController::class, 'user'])->name('user');
+    Route::post('/user_list', [UserController::class, 'userList'])->name('UserList');
+    Route::post('/create_user_post', [UserController::class, 'createUserPost'])->name('create_user_post');
+    Route::get('/user_site_access', [UserSiteAccessController::class, 'getUserSiteAccess'])->name('getUserSiteAccess');
+    Route::post('/add_user_access_post', [UserSiteAccessController::class, 'addUserAccessPost'])->name('add_user_access_post');
+    Route::post('/user_info', [UserController::class, 'userInfo'])->name('user_info');
+    Route::post('/update_user_post', [UserController::class, 'updateUserPost'])->name('update_user_post');
+    Route::post('/delete_user_confirmed', [UserController::class, 'deleteUserConfirmed'])->name('delete_user_confirmed');
+    Route::post('/user_account_post', [UserController::class, 'userAccountPost'])->name('user_account_post');
 });
 
 require __DIR__.'/settings.php';

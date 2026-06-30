@@ -28,6 +28,11 @@ Consequences:
 Characterization impact:
 ```
 
+## Migration Compass (Current Slice Pointer)
+
+- Last approved slice: `User Management` (Slice 11)
+- Current authorized scope: `Reports` (Slice 12)
+
 ## Decisions
 
 ## 2026-06-30 - Exclude Preview Gateway/Meter Tests From Default Pest Runs
@@ -264,3 +269,48 @@ Consequences:
 
 Characterization impact:
 - Meter slice behavior is no longer placeholder-only and is now an official part of this migration pass.
+
+## 2026-06-30 - Start User Management Slice (Slice 11) under current migration order
+
+Status: Approved
+Owner: Codex
+Slice: User Management
+
+Decision:
+Proceed to Slice 11 User Management after completing documentation updates for the migration slice pointer and inventory row.
+
+Context:
+- User Management has been identified as Slice 11 in the migration order after Meter and before Reports.
+- Contract extraction from Laravel 8 and slice artifacts is available in the legacy browser characterization block and legacy reference examples.
+
+Consequences:
+- `tests/Feature/UserTest.php` and supporting User/UserSiteAccess implementation are now in-scope for Slice 11 work.
+- `docs/migration/legacy-test-inventory.md` user row was added for slice tracking before this slice is considered fully accepted.
+- Existing behavior for previously approved slices is unaffected.
+
+Characterization impact:
+- User management coverage is now actively being built in slice 11, but slice acceptance remains pending until slice gates close with Architect review.
+
+## 2026-06-30 - Run Slice 11 User Management Acceptance Gates
+
+Status: Approved
+Owner: Codex
+Slice: User Management
+
+Decision:
+Run Slice 11 technical acceptance gates after implementation and confirm no gate failures are introduced by user-management behavior.
+
+Context:
+- User route surface and feature tests were in place for `/user`, `/user_list`, `/create_user_post`, `/user_info`, `/update_user_post`, `/delete_user_confirmed`, `/user_account_post`, `/user_site_access`, and `/add_user_access_post`.
+- User-management behavior is high-risk because it controls session-protected access semantics and credential-related mutations.
+
+Consequences:
+- `php artisan test --compact` passes with `tests/Feature/UserTest.php` green.
+- `php artisan test --compact tests/Feature/UserTest.php` passes.
+- `vendor/bin/pint --dirty --format agent` passes.
+- `npm run lint:check` passes.
+- `npm run types:check` passes.
+- No additional User-management gaps were identified during this gate run that block Slice 11 technical acceptance.
+
+Characterization impact:
+- Slice 11 technical gates are clean; user-management slice remains pending only on Architect review.
