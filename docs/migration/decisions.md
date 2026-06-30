@@ -53,7 +53,7 @@ Characterization impact:
 
 ## 2026-06-30 - Preserve Legacy Division Maintenance Endpoint Contract for Slice 4
 
-Status: Proposed
+Status: Approved
 Owner: Codex
 Slice: Division
 
