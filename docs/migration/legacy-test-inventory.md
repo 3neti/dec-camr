@@ -35,6 +35,10 @@ Copied -> Ported -> Enabled -> Passing
 | Company feature contract tests | `tests/Feature/CompanyTest.php` | `tests/Feature/CompanyTest.php` | Company | Passing | Core company endpoints are now covered for Slice 3 at route, list, and mutation levels. |
 | Legacy division feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Division block) | `tests/Feature/DivisionTest.php` | Division | Passing | Division maintenance contract coverage now targets route, list, create, update, delete behavior at Slice 4 level. |
 | Configuration file feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Configuration File block) | `tests/Feature/ConfigurationFileTest.php` | Configuration | Passing | Configuration file list/create/update/delete contracts are now implemented in Laravel 13 test form for Slice 5. |
+| Legacy site feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Site block) | `tests/Feature/SiteTest.php` | Site | Passing | Site maintenance list/create/update/delete and scoped/administrative list contracts are now scaffolded for Slice 6. |
+| Legacy gateway feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Gateway block) | `tests/Feature/GatewayTest.php` | Gateway | Blocked | Preview-only Gateway scaffold; route and mutation coverage exists but is not slice-accepted. |
+| Legacy meter feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Meter block) | `tests/Feature/MeterTest.php` | Meter | Blocked | Preview-only Meter scaffold; route/mutation contracts are present for validation support, not formal slice completion. |
+| Legacy meter location feature contract tests | `tests/Browser/legacy-characterization/characterization.spec.js` (Meter Location block) | `tests/Feature/MeterLocationTest.php` | Meter Location | Blocked | Preview-only Meter Location scaffolding; behavior is for UI/data prep support and not formally accepted yet. |
 
 ## Current Rule
 

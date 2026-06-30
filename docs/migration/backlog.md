@@ -10,5 +10,6 @@
 | MIG-006 | Configuration | High | Web settings/logo maintenance has presentation and persistence implications; expected file upload, fallback, and display behavior requires confirmation before migration. | Go/No-Go assessment | Yes | Open |
 | MIG-007 | User Management | High | User site-access mutation behavior (including authorization and mutation side effects) is migration-sensitive and requires explicit legacy alignment before implementation. | Go/No-Go assessment | Yes | Open |
 | MIG-008 | Authentication | High | Password reset side effect and transport is partially preserved with local password mutation but legacy mail dispatch semantics are not yet fully documented for Slice 1 implementation. | Slice 1 | Yes | Open |
+| MIG-009 | Cross-cutting | Medium | Official slice order and completion markers must be reconciled because Gateway/Meter/Meter Location scaffolding is present as preview support but was not formally migrated. | Slice 7 variation review | Yes | Open |
 
 Suggested statuses: Open, In Review, Resolved, Deferred, Accepted Legacy Behavior, Rejected.

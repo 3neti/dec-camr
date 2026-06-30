@@ -30,6 +30,26 @@ Characterization impact:
 
 ## Decisions
 
+## 2026-06-30 - Preserve Legacy `/site` as Site Maintenance Surface for Slice 6
+
+Status: Approved
+Owner: Codex
+Slice: Site
+
+Decision:
+Promote `/site` from the temporary dashboard shim to the Site slice entry surface and add legacy Site maintenance endpoints (`/site/list`, `/site/user/list`, `/create_site_post`, `/site_info`, `/update_site_post`, `/delete_site_confirmed`, `/site_details/{siteID}`) using legacy request keys and response payload conventions.
+
+Context:
+- Slice 6 introduces Site maintenance before Building and Gateway/Meter slices.
+- The legacy route contract in Laravel 8 uses `/site` as the Site maintenance dashboard and depends on those legacy maintenance endpoints for downstream workflow.
+
+Consequences:
+- `tests/Feature/DashboardTest.php` now treats an authenticated legacy-session `/site` visit as Site Management (not Dashboard).
+- Dashboard responsibilities are retained through `/dashboard` for modern Laravel auth flows.
+
+Characterization impact:
+- The Site slice can now express route-level and mutation-level contract tests in `tests/Feature/SiteTest.php` while keeping earlier dashboard redirect and session protection behavior.
+
 ## 2026-06-30 - Preserve Legacy Company Maintenance Endpoint Contract for Slice 3
 
 Status: Approved
@@ -157,3 +177,25 @@ Consequences:
 
 Characterization impact:
 Authentication characterization remains anchored to `docs/legacy-characterization` and this compatibility route only resolves baseline drift in baseline test execution.
+
+## 2026-06-30 - Keep Gateway, Meter Location, and Meter as Preview Scaffolding Only
+
+Status: Approved
+Owner: Codex
+Slice: Cross-cutting
+
+Decision:
+Keep the current Gateway/Meter/Meter Location implementation and seed/UI visibility work as developer-preview scaffolding only, without treating these domains as officially migrated or complete.
+
+Context:
+- Slice 7 governance and earlier decisions place Building as the official slice boundary for this release stage.
+- Gateway/Meter/Meter Location scaffolding was added to support visual validation and unblock future implementation context, but official characterization migration has not completed these slices.
+- Legacy contract inventory should reflect preview status to avoid accidental acceptance of unreviewed behaviors.
+
+Consequences:
+- No route, mutation, or behavioral claims for Gateway/Meter/Meter Location should be interpreted as slice-complete.
+- Later slice completion remains blocked until the architect signs off on slice boundary reconciliation and official Slice 7+ plan adjustments.
+- Tests and migrations for these domains remain in preview context and are not to be considered slice-approved.
+
+Characterization impact:
+- Inventory status for these domains must remain non-complete (for example, `Blocked`) until formal slice acceptance.
