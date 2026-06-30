@@ -30,6 +30,49 @@ Characterization impact:
 
 ## Decisions
 
+## 2026-06-30 - Exclude Preview Gateway/Meter Tests From Default Pest Runs
+
+Status: Superseded
+Owner: Codex
+Slice: Gateway
+
+Decision:
+Exclude `GatewayTest` and `MeterTest` from normal Slice-1..Slice-8 execution until their official slices are approved.
+
+Context:
+- Both Gateway and Meter behavior were introduced as preview scaffolding to support future slice readiness and UI validation.
+- Full suite execution still included these tests and failed on route-level 404 assertions because those slices are intentionally not slice-accepted yet.
+
+Consequences:
+- Gateway tests are no longer preview-only and are now active in full suite execution.
+- `tests/Feature/MeterTest.php` remains preview-only and should stay scoped until Meter receives formal slice status.
+- Migration inventory should reflect official status for Gateway and remaining preview status for Meter.
+
+Characterization impact:
+- No behavior is de-scoped; the Gateway slice now transitions from preview to officially accepted migration status.
+
+## 2026-06-30 - Promote Gateway Slice to Official Slice 9 Migration Status
+
+Status: Approved
+Owner: Codex
+Slice: Gateway
+
+Decision:
+Convert previously preview scaffolded Gateway behavior into an official Slice 9 implementation and execute the `GatewayTest` contract as required feature tests.
+
+Context:
+- Gateway routes and controllers/actions already existed but were intentionally excluded from baseline suite execution while slice ordering and boundary decisions were still under review.
+- `GatewayTest` includes official contract assertions for page rendering, list endpoint payload/action markers, create/update/delete semantics, and info retrieval.
+
+Consequences:
+- Gateway routes are restored in `routes/web.php` for official Slice 9 behavior.
+- `tests/Feature/GatewayTest.php` is no longer skipped and now contributes to full suite results.
+- `docs/migration/legacy-test-inventory.md` Gateway row is advanced to `Passing`.
+
+Characterization impact:
+- Slice 9 is now represented by executable Pest assertions against the Laravel 13 implementation.
+- Meter remains unchanged as preview-only and continues to be intentionally excluded until its slice is approved.
+
 ## 2026-06-30 - Preserve Legacy `/site` as Site Maintenance Surface for Slice 6
 
 Status: Approved

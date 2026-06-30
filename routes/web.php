@@ -5,6 +5,8 @@ use App\Http\Controllers\BuildingController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ConfigurationFileController;
 use App\Http\Controllers\DivisionController;
+use App\Http\Controllers\GatewayController;
+use App\Http\Controllers\MeterLocationController;
 use App\Http\Controllers\SiteController;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +65,19 @@ Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
     Route::post('/delete_building_confirmed', [BuildingController::class, 'deleteBuildingConfirmed'])->name('DeleteBuildingInfo');
     Route::post('/get_building_accordion', [BuildingController::class, 'getBuildingAccordion'])->name('get_building_accordion');
 
+    Route::get('/gateway', [GatewayController::class, 'gateway'])->name('gateway');
+    Route::get('/getGateway', [GatewayController::class, 'gatewayList'])->name('getGateway');
+    Route::post('/create_gateway_post', [GatewayController::class, 'createGatewayPost'])->name('CREATE_GATEWAY');
+    Route::post('/gateway_info', [GatewayController::class, 'gatewayInfo'])->name('gateway_info');
+    Route::post('/update_gateway_post', [GatewayController::class, 'updateGatewayPost'])->name('UPDATE_GATEWAY');
+    Route::post('/delete_gateway_confirmed', [GatewayController::class, 'deleteGatewayConfirmed'])->name('DeleteGateway');
+
+    Route::post('/getMeterLocation', [MeterLocationController::class, 'getMeterLocation'])->name('getMeterLocation');
+    Route::post('/create_meter_location_post', [MeterLocationController::class, 'createMeterLocationPost'])->name('CREATE_METER_LOCATION_INFO');
+    Route::post('/update_meter_location_post', [MeterLocationController::class, 'updateMeterLocationPost'])->name('UPDATE_METER_LOCATION_INFO');
+    Route::post('/meter_location_info', [MeterLocationController::class, 'meterLocationInfo'])->name('MeterLocationInfo');
+    Route::post('/delete_meter_location_confirmed', [MeterLocationController::class, 'deleteMeterLocationConfirmed'])->name('DeleteMeterLocationInfo');
+    Route::post('/get_ee_room_location_accordion', [MeterLocationController::class, 'getEeRoomLocationAccordion'])->name('get_ee_room_location_accordion');
 });
 
 require __DIR__.'/settings.php';
