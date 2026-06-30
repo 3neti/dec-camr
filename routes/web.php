@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LegacyAuthController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\ConfigurationFileController;
 use App\Http\Controllers\DivisionController;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,13 @@ Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
     Route::post('/division_info', [DivisionController::class, 'divisionInfo'])->name('division_info');
     Route::post('/update_division_post', [DivisionController::class, 'updateDivisionPost'])->name('update_division_post');
     Route::post('/delete_division_confirmed', [DivisionController::class, 'deleteDivisionConfirmed'])->name('delete_division_confirmed');
+
+    Route::get('/configuration_file', [ConfigurationFileController::class, 'configurationFile'])->name('configuration_file');
+    Route::post('/configuration_file_list', [ConfigurationFileController::class, 'configurationFileList'])->name('configuration_file_list');
+    Route::post('/create_configuration_file_post', [ConfigurationFileController::class, 'createConfigurationFilePost'])->name('create_configuration_file_post');
+    Route::post('/configuration_file_info', [ConfigurationFileController::class, 'configurationFileInfo'])->name('configuration_file_info');
+    Route::post('/update_configuration_file_post', [ConfigurationFileController::class, 'updateConfigurationFilePost'])->name('update_configuration_file_post');
+    Route::post('/delete_configuration_file_confirmed', [ConfigurationFileController::class, 'deleteConfigurationFileConfirmed'])->name('delete_configuration_file_confirmed');
 });
 
 require __DIR__.'/settings.php';
