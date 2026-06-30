@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Gateway;
+use App\Models\Meter;
 use App\Models\MeterLocation;
 use App\Models\Site;
 use App\Models\User;
@@ -55,6 +56,38 @@ test('legacy gateway list includes legacy action marker and scope filter', funct
         ->assertJsonFragment([
             'action' => '<div align="center" class="action_table_menu_gateway"><a href="#" data-id="'.$this->gateway->rtu_id.'" class="btn-info btn-circle btn-sm bi bi-eye-fill btn_icon_table btn_icon_table_view" id="ViewGateway"></a><a href="#" data-id="'.$this->gateway->rtu_id.'" class="btn-warning btn-circle btn-sm bi bi-pencil-fill btn_icon_table btn_icon_table_edit" id="EditGateway"></a><a href="#" data-id="'.$this->gateway->rtu_id.'" class="btn-danger btn-circle btn-sm bi bi-trash3-fill btn_icon_table btn_icon_table_delete" id="DeleteGateway"></a></div>',
         ]);
+});
+
+test('legacy gateway list supports datatables search, pagination, and draw', function () {
+    Gateway::factory()->create([
+        'site_idx' => $this->site->site_id,
+        'site_code' => $this->site->site_code,
+        'location_idx' => $this->location->location_id,
+        'gateway_sn' => 'GW-099',
+        'gateway_mac' => 'AA:BB:CC:DD:EE:99',
+        'gateway_ip' => '10.0.0.99',
+    ]);
+
+    $admin = User::factory()->create();
+
+    $this->withSession(['loginID' => $admin->id])
+        ->json('GET', '/getGateway', [
+            'siteID' => $this->site->site_id,
+            'draw' => 14,
+            'start' => 0,
+            'length' => 1,
+            'search' => ['value' => 'GW-'],
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => [
+                ['data' => 'gateway_sn'],
+                ['data' => 'gateway_mac'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 14)
+        ->assertJsonPath('recordsTotal', 2)
+        ->assertJsonPath('recordsFiltered', 2)
+        ->assertJsonCount(1, 'data');
 });
 
 test('legacy gateway creation validates required fields and creates on success', function () {
@@ -146,4 +179,25 @@ test('legacy gateway delete returns deleted confirmation', function () {
         ->assertSee('Deleted');
 
     expect(Gateway::query()->find($target->rtu_id))->toBeNull();
+});
+
+test('legacy gateway delete is blocked while dependent meters exist', function () {
+    $admin = User::factory()->create();
+
+    $target = Gateway::factory()->create([
+        'site_idx' => $this->site->site_id,
+        'site_code' => $this->site->site_code,
+    ]);
+
+    Meter::factory()->create([
+        'rtu_idx' => $target->rtu_id,
+        'site_idx' => $this->site->site_id,
+    ]);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->post('/delete_gateway_confirmed', ['gatewayID' => $target->rtu_id])
+        ->assertStatus(500)
+        ->assertSee('Delete Failed');
+
+    expect(Gateway::query()->find($target->rtu_id))->not->toBeNull();
 });

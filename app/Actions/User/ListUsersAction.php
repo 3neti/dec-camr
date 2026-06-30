@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Actions\User;
 
+use App\Actions\Support\DataTableQueryOptions;
 use App\Models\User;
 use Illuminate\Http\Request;
 
 final class ListUsersAction
 {
+    public function __construct(
+        private readonly DataTableQueryOptions $dataTableQueryOptions,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -18,13 +23,28 @@ final class ListUsersAction
             ->select('id', 'user_real_name', 'user_job_title', 'name', 'email', 'user_type', 'user_access', 'created_at', 'updated_at')
             ->orderBy('name');
 
+        $tableMetadata = $this->dataTableQueryOptions->apply(
+            $query,
+            ['user_name', 'user_real_name', 'user_job_title', 'user_email_address', 'user_type', 'user_access'],
+            [
+                'user_id' => 'id',
+                'user_real_name' => 'user_real_name',
+                'user_job_title' => 'user_job_title',
+                'user_name' => 'name',
+                'user_email_address' => 'email',
+                'user_type' => 'user_type',
+                'user_access' => 'user_access',
+                'created_at_dt_format' => 'created_at',
+                'updated_at_dt_format' => 'updated_at',
+            ],
+        );
+
         $users = $query->get();
-        $recordsTotal = $users->count();
 
         return [
-            'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsTotal,
+            'draw' => $tableMetadata['draw'],
+            'recordsTotal' => $tableMetadata['recordsTotal'],
+            'recordsFiltered' => $tableMetadata['recordsFiltered'],
             'data' => $users->map(fn (User $user): array => [
                 'user_id' => $user->id,
                 'user_real_name' => $user->user_real_name,

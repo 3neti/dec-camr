@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\Division;
+use App\Models\Site;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -38,6 +40,30 @@ test('legacy division list contract uses records total and action links', functi
         ->assertJsonFragment([
             'action' => '<a href="#" data-id="'.$this->division->division_id.'" class="bi bi-pencil-fill btn_icon_table btn_icon_table_edit" id="editDivision" title="Update Division Information"></a> <a href="#" data-id="'.$this->division->division_id.'" class="bi bi-trash3-fill btn_icon_table btn_icon_table_delete" id="deleteDivision" title="Delete Division Information"></a>',
         ]);
+});
+
+test('legacy division list supports datatables search, pagination, and draw', function () {
+    $admin = User::factory()->create();
+    Division::factory()->create(['division_code' => 'AAA', 'division_name' => 'AAA Division']);
+    Division::factory()->create(['division_code' => 'ZZZ', 'division_name' => 'ZZZ Division']);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->postJson('/division_list', [
+            'draw' => 8,
+            'start' => 0,
+            'length' => 2,
+            'search' => ['value' => 'Division'],
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => [
+                ['data' => 'division_name'],
+                ['data' => 'division_code'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 8)
+        ->assertJsonPath('recordsTotal', 3)
+        ->assertJsonPath('recordsFiltered', 3)
+        ->assertJsonCount(2, 'data');
 });
 
 test('legacy division create validates required fields and persists on success', function () {
@@ -116,4 +142,25 @@ test('legacy division delete returns deleted confirmation', function () {
         ->assertOk();
 
     expect(Division::query()->find($target->division_id))->toBeNull();
+});
+
+test('legacy division delete is blocked while dependent sites exist', function () {
+    $admin = User::factory()->create();
+    $target = Division::factory()->create(['division_code' => 'DEL-DIV', 'division_name' => 'Disposable Division']);
+    $company = Company::factory()->create();
+
+    Site::factory()->create([
+        'company_idx' => $company->company_id,
+        'division_idx' => $target->division_id,
+        'building_idx' => 0,
+        'site_code' => 'SITE-DEPT',
+        'building_description' => 'Division Dependency',
+    ]);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->post('/delete_division_confirmed', ['DivisionID' => $target->division_id])
+        ->assertStatus(500)
+        ->assertJson(['error' => 'Delete Failed!']);
+
+    expect(Division::query()->find($target->division_id))->not->toBeNull();
 });

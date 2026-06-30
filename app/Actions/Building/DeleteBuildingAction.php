@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Building;
 
 use App\Models\Building;
+use App\Models\Meter;
 
 final class DeleteBuildingAction
 {
@@ -13,6 +14,10 @@ final class DeleteBuildingAction
         $building = Building::find($buildingId);
 
         if (! $building) {
+            return false;
+        }
+
+        if (Meter::query()->where('building_idx', $buildingId)->exists()) {
             return false;
         }
 

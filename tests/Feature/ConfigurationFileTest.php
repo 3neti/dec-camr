@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ConfigurationFile;
+use App\Models\Meter;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -35,6 +36,30 @@ test('legacy configuration file list contract uses action link ids', function ()
         ->assertJsonFragment([
             'action' => '<a href="#" data-id="'.$this->configurationFile->config_id.'" class="bi bi-pencil-fill btn_icon_table btn_icon_table_edit" id="editconfiguration_file" title="Update Company Information"></a> <a href="#" data-id="'.$this->configurationFile->config_id.'" class="bi bi-trash3-fill btn_icon_table btn_icon_table_delete" id="deleteconfiguration_file" title="Delete Company Information"></a>',
         ]);
+});
+
+test('legacy configuration file list supports datatables search, pagination, and draw', function () {
+    $admin = User::factory()->create();
+    ConfigurationFile::factory()->create(['config_file' => 'aaa.cfg']);
+    ConfigurationFile::factory()->create(['config_file' => 'zzz.cfg']);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->postJson('/configuration_file_list', [
+            'draw' => 4,
+            'start' => 0,
+            'length' => 2,
+            'search' => ['value' => '.cfg'],
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => [
+                ['data' => 'config_file'],
+                ['data' => 'created_at_dt_format'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 4)
+        ->assertJsonPath('recordsTotal', 3)
+        ->assertJsonPath('recordsFiltered', 3)
+        ->assertJsonCount(2, 'data');
 });
 
 test('legacy configuration file create validates required name and persists on success', function () {
@@ -97,4 +122,18 @@ test('legacy configuration file delete returns deleted confirmation', function (
         ->assertOk();
 
     expect(ConfigurationFile::query()->find($target->config_id))->toBeNull();
+});
+
+test('legacy configuration file delete is blocked while dependent meters exist', function () {
+    $admin = User::factory()->create();
+    $target = ConfigurationFile::factory()->create(['config_file' => 'meter-dependent.cfg']);
+
+    Meter::factory()->create(['config_idx' => $target->config_id]);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->post('/delete_configuration_file_confirmed', ['ConfigFileID' => $target->config_id])
+        ->assertStatus(500)
+        ->assertJson(['error' => 'Delete Failed!']);
+
+    expect(ConfigurationFile::query()->find($target->config_id))->not->toBeNull();
 });

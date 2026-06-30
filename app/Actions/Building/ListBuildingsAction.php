@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Actions\Building;
 
+use App\Actions\Support\DataTableQueryOptions;
 use App\Models\Building;
 use Illuminate\Http\Request;
 
 final class ListBuildingsAction
 {
+    public function __construct(
+        private readonly DataTableQueryOptions $dataTableQueryOptions,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -16,13 +21,15 @@ final class ListBuildingsAction
     {
         $query = Building::query()
             ->select(
-                'building_id',
-                'site_idx',
-                'building_code',
-                'building_description',
-                'created_at',
-                'updated_at',
+                'meter_building_table.building_id',
+                'meter_building_table.site_idx',
+                'meter_building_table.building_code',
+                'meter_building_table.building_description',
+                'meter_building_table.created_at',
+                'meter_building_table.updated_at',
             )
+            ->selectRaw('meter_site.site_code')
+            ->join('meter_site', 'meter_site.site_id', '=', 'site_idx')
             ->orderBy('building_code');
 
         $siteId = (int) $request->integer('siteID');
@@ -30,13 +37,18 @@ final class ListBuildingsAction
             $query->where('site_idx', $siteId);
         }
 
+        $tableMetadata = $this->dataTableQueryOptions->apply(
+            $query,
+            ['meter_site.site_code', 'meter_building_table.building_code', 'meter_building_table.building_description'],
+            [],
+        );
+
         $buildings = $query->get();
-        $recordsTotal = $buildings->count();
 
         return [
-            'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsTotal,
+            'draw' => $tableMetadata['draw'],
+            'recordsTotal' => $tableMetadata['recordsTotal'],
+            'recordsFiltered' => $tableMetadata['recordsFiltered'],
             'data' => $buildings->map(fn (Building $building): array => [
                 'building_id' => $building->building_id,
                 'site_idx' => $building->site_idx,

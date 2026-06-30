@@ -8,9 +8,11 @@ use App\Http\Controllers\DivisionController;
 use App\Http\Controllers\GatewayController;
 use App\Http\Controllers\MeterController;
 use App\Http\Controllers\MeterLocationController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserSiteAccessController;
+use App\Http\Middleware\EnsureLegacyAdmin;
 use App\Http\Middleware\EnsureLegacyAuthenticated;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -90,6 +92,38 @@ Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
     Route::post('/delete_meter_location_confirmed', [MeterLocationController::class, 'deleteMeterLocationConfirmed'])->name('DeleteMeterLocationInfo');
     Route::post('/get_ee_room_location_accordion', [MeterLocationController::class, 'getEeRoomLocationAccordion'])->name('get_ee_room_location_accordion');
 
+    Route::post('/generate_building_list', [ReportController::class, 'generateBuildingList'])->name('GetBuildingList');
+    Route::post('/generate_meter_list', [ReportController::class, 'generateMeterList'])->name('GetMeterList');
+
+    Route::get('/sap_report', [ReportController::class, 'sapReport'])->name('SAPReport');
+    Route::post('/generate_sap_report', [ReportController::class, 'generateSapReport'])->name('generate_sap_report');
+    Route::get('/generate_sap_report_excel', [ReportController::class, 'generateSapReportExcel'])->name('generate_sap_report_excel');
+
+    Route::get('/download_offline_gateway', [ReportController::class, 'downloadOfflineGateway'])->name('download_offline_gateway');
+    Route::get('/download_offline_meter', [ReportController::class, 'downloadOfflineMeter'])->name('download_offline_meter');
+
+    Route::get('/raw_report', [ReportController::class, 'rawReport'])->name('RAWReport');
+    Route::post('/generate_raw_report', [ReportController::class, 'generateRawReport'])->name('generate_raw_report');
+    Route::get('/generate_raw_report_excel', [ReportController::class, 'generateRawReportExcel'])->name('generate_raw_report_excel');
+
+    Route::get('/site_report', [ReportController::class, 'siteReport'])->name('SiteReport');
+    Route::post('/generate_site_report', [ReportController::class, 'generateSiteReport'])->name('generate_site_report');
+    Route::get('/generate_site_report_excel', [ReportController::class, 'generateSiteReportExcel'])->name('generate_site_report_excel');
+    Route::get('/generate_site_as_built_excel', [ReportController::class, 'generateSiteAsBuiltExcel'])->name('generate_site_as_built_excel');
+
+    Route::get('/consumption_report', [ReportController::class, 'consumptionReport'])->name('ConsumptionReport');
+    Route::post('/generate_consumption_report/hourly', [ReportController::class, 'consumptionReportHourly'])->name('consumption_report_hourly');
+    Route::post('/generate_consumption_report/daily', [ReportController::class, 'consumptionReportDaily'])->name('consumption_report_daily');
+    Route::get('/download_consumption_report', [ReportController::class, 'downloadConsumptionReport'])->name('download_consumption_report');
+
+    Route::get('/demand_report', [ReportController::class, 'demandReport'])->name('DemandReport');
+    Route::post('/generate_demand_report/hourly', [ReportController::class, 'demandReportHourly'])->name('demand_report_hourly');
+    Route::post('/generate_demand_report/fifteen', [ReportController::class, 'demandReportFifteen'])->name('demand_report_15');
+    Route::get('/download_demand_report', [ReportController::class, 'downloadDemandReport'])->name('download_demand_report');
+
+});
+
+Route::middleware([EnsureLegacyAuthenticated::class, EnsureLegacyAdmin::class])->group(function () {
     Route::get('/user', [UserController::class, 'user'])->name('user');
     Route::post('/user_list', [UserController::class, 'userList'])->name('UserList');
     Route::post('/create_user_post', [UserController::class, 'createUserPost'])->name('create_user_post');

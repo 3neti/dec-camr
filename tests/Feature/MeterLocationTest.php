@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Meter;
 use App\Models\MeterLocation;
 use App\Models\Site;
 use App\Models\User;
@@ -35,6 +36,36 @@ test('legacy meter location list contract returns datatable payload and action a
             'location_description' => 'Location A',
             'action' => '<a href="#" title="Click to Edit" data-id="'.$this->location->location_id.'" style="cursor: pointer;" class="btn-warning btn-circle bi bi-pencil-fill btn_icon_accordion btn_icon_table_edit" id="editMeterLocation"></a><a href="#" title="Click to Delete" data-id="'.$this->location->location_id.'" style="cursor: pointer;" class="btn-danger btn-circle bi-trash3-fill btn_icon_accordion btn_icon_table_delete" id="deleteMeterLocation"></a>',
         ]);
+});
+
+test('legacy meter location list supports datatables search, pagination, and draw', function () {
+    MeterLocation::factory()->create([
+        'site_idx' => $this->site->site_id,
+        'location_code' => 'ER-Z',
+        'location_description' => 'Zone Z',
+    ]);
+
+    $admin = User::factory()->create();
+
+    $this->withSession(['loginID' => $admin->id])
+        ->postJson('/getMeterLocation', [
+            'siteID' => $this->site->site_id,
+            'draw' => 19,
+            'start' => 0,
+            'length' => 1,
+            'search' => ['value' => 'ER'],
+            'order' => [['column' => 0, 'dir' => 'desc']],
+            'columns' => [
+                ['data' => 'location_code'],
+                ['data' => 'location_description'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 19)
+        ->assertJsonPath('recordsTotal', 2)
+        ->assertJsonPath('recordsFiltered', 2)
+        ->assertJsonCount(1, 'data')
+        ->assertJsonFragment(['location_code' => $this->location->location_code]);
 });
 
 test('legacy meter location create validates required fields and creates rows', function () {
@@ -148,6 +179,28 @@ test('legacy meter location delete returns textual confirmation', function () {
         ->assertSee('Deleted');
 
     expect(MeterLocation::query()->find($target->location_id))->toBeNull();
+});
+
+test('legacy meter location delete is blocked while dependent meters exist', function () {
+    $admin = User::factory()->create();
+
+    $target = MeterLocation::factory()->create([
+        'site_idx' => $this->site->site_id,
+        'location_code' => 'ER-DEL-BLOCK',
+        'location_description' => 'Delete Blocked',
+    ]);
+
+    Meter::factory()->create([
+        'location_idx' => $target->location_id,
+        'site_idx' => $this->site->site_id,
+    ]);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->post('/delete_meter_location_confirmed', ['meterlocationID' => $target->location_id])
+        ->assertStatus(500)
+        ->assertJson(['error' => 'Delete Failed!']);
+
+    expect(MeterLocation::query()->find($target->location_id))->not->toBeNull();
 });
 
 test('legacy meter location accordion endpoint returns raw location list for selected site', function () {

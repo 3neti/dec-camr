@@ -2,11 +2,16 @@
 
 namespace App\Actions\Gateway;
 
+use App\Actions\Support\DataTableQueryOptions;
 use App\Models\Gateway;
 use Illuminate\Http\Request;
 
 final class ListGatewaysAction
 {
+    public function __construct(
+        private readonly DataTableQueryOptions $dataTableQueryOptions,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -40,13 +45,33 @@ final class ListGatewaysAction
             $query->where('location_idx', $locationId);
         }
 
+        $tableMetadata = $this->dataTableQueryOptions->apply(
+            $query,
+            ['site_code', 'gateway_sn', 'gateway_mac', 'gateway_ip', 'gateway_description', 'location_idx', 'site_idx'],
+            [
+                'rtu_id' => 'rtu_id',
+                'site_idx' => 'site_idx',
+                'site_code' => 'site_code',
+                'gateway_sn' => 'gateway_sn',
+                'gateway_mac' => 'gateway_mac',
+                'gateway_ip' => 'gateway_ip',
+                'location_idx' => 'location_idx',
+                'gateway_description' => 'gateway_description',
+                'update_rtu' => 'update_rtu',
+                'update_rtu_location' => 'update_rtu_location',
+                'update_rtu_ssh' => 'update_rtu_ssh',
+                'update_rtu_force_lp' => 'update_rtu_force_lp',
+                'last_log_update' => 'last_log_update',
+                'soft_rev' => 'soft_rev',
+            ],
+        );
+
         $gateways = $query->get();
-        $recordsTotal = $gateways->count();
 
         return [
-            'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsTotal,
+            'draw' => $tableMetadata['draw'],
+            'recordsTotal' => $tableMetadata['recordsTotal'],
+            'recordsFiltered' => $tableMetadata['recordsFiltered'],
             'data' => $gateways->map(function (Gateway $gateway): array {
                 return [
                     'rtu_id' => $gateway->rtu_id,

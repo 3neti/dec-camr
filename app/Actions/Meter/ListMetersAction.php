@@ -2,11 +2,16 @@
 
 namespace App\Actions\Meter;
 
+use App\Actions\Support\DataTableQueryOptions;
 use App\Models\Meter;
 use Illuminate\Http\Request;
 
 final class ListMetersAction
 {
+    public function __construct(
+        private readonly DataTableQueryOptions $dataTableQueryOptions,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -45,13 +50,31 @@ final class ListMetersAction
             $query->where('meter_details.rtu_idx', $gatewayId);
         }
 
-        $meters = $query->orderBy('meter_details.meter_name')->get();
-        $recordsTotal = $meters->count();
+        $tableMetadata = $this->dataTableQueryOptions->apply(
+            $query,
+            ['meter_name', 'customer_name', 'meter_default_name', 'meter_remarks', 'meter_role', 'meter_status', 'meter_type', 'meter_brand', 'gateway_sn', 'location_code', 'config_file'],
+            [
+                'meter_id' => 'meter_details.meter_id',
+                'meter_name' => 'meter_details.meter_name',
+                'meter_default_name' => 'meter_details.meter_default_name',
+                'meter_status' => 'meter_details.meter_status',
+                'meter_role' => 'meter_details.meter_role',
+                'meter_remarks' => 'meter_details.meter_remarks',
+                'meter_multiplier' => 'meter_details.meter_multiplier',
+                'meter_type' => 'meter_details.meter_type',
+                'meter_brand' => 'meter_details.meter_brand',
+                'gateway_sn' => 'gateway_sn',
+                'location_code' => 'meter_location_table.location_code',
+                'config_file' => 'meter_configuration_file.config_file',
+            ],
+        );
+
+        $meters = $query->get();
 
         return [
-            'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsTotal,
+            'draw' => $tableMetadata['draw'],
+            'recordsTotal' => $tableMetadata['recordsTotal'],
+            'recordsFiltered' => $tableMetadata['recordsFiltered'],
             'data' => $meters->map(function (Meter $meter): array {
                 /** @var string $gatewaySn */
                 $gatewaySn = $meter->gateway_sn;

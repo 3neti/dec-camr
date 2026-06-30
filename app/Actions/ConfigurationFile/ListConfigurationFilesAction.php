@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Actions\ConfigurationFile;
 
+use App\Actions\Support\DataTableQueryOptions;
 use App\Models\ConfigurationFile;
 use Illuminate\Http\Request;
 
 final class ListConfigurationFilesAction
 {
+    public function __construct(
+        private readonly DataTableQueryOptions $dataTableQueryOptions,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -18,13 +23,22 @@ final class ListConfigurationFilesAction
             ->select('config_id', 'config_file', 'created_at', 'updated_at')
             ->orderBy('config_file');
 
+        $tableMetadata = $this->dataTableQueryOptions->apply(
+            $query,
+            ['config_file'],
+            [
+                'config_file' => 'config_file',
+                'created_at_dt_format' => 'created_at',
+                'updated_at_dt_format' => 'updated_at',
+            ],
+        );
+
         $configurationFiles = $query->get();
-        $recordsTotal = $configurationFiles->count();
 
         return [
-            'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsTotal,
+            'draw' => $tableMetadata['draw'],
+            'recordsTotal' => $tableMetadata['recordsTotal'],
+            'recordsFiltered' => $tableMetadata['recordsFiltered'],
             'data' => $configurationFiles->map(fn (ConfigurationFile $configurationFile): array => [
                 'config_id' => $configurationFile->config_id,
                 'config_file' => $configurationFile->config_file,

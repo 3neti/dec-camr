@@ -9,6 +9,7 @@ use App\Actions\Site\ListSitesAction;
 use App\Actions\Site\UpdateSiteAction;
 use App\Http\Requests\Site\CreateSiteRequest;
 use App\Http\Requests\Site\UpdateSiteRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -22,9 +23,20 @@ final class SiteController extends Controller
         private readonly DeleteSiteAction $deleteSiteAction,
     ) {}
 
+    private function legacyUser(): User
+    {
+        $legacyUser = request()->attributes->get('legacyUser');
+
+        if (! $legacyUser instanceof User) {
+            abort(403, 'Unauthorized');
+        }
+
+        return $legacyUser;
+    }
+
     public function site()
     {
-        $sitePayload = $this->listSitesAction->execute(request());
+        $sitePayload = $this->listSitesAction->execute(request(), false, $this->legacyUser());
         $sites = $sitePayload['data'] ?? [];
 
         return Inertia::render('Site', [
@@ -35,12 +47,12 @@ final class SiteController extends Controller
 
     public function siteList(Request $request)
     {
-        return response()->json($this->listSitesAction->execute($request, false));
+        return response()->json($this->listSitesAction->execute($request, false, $this->legacyUser()));
     }
 
     public function siteUserList(Request $request)
     {
-        return response()->json($this->listSitesAction->execute($request, true));
+        return response()->json($this->listSitesAction->execute($request, true, $this->legacyUser()));
     }
 
     public function createSitePost(CreateSiteRequest $request)

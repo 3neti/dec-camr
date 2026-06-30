@@ -1,9 +1,11 @@
 <?php
 
+use App\Models\Building;
 use App\Models\Company;
 use App\Models\Division;
 use App\Models\Site;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -22,7 +24,9 @@ test('legacy site page requires legacy login session', function () {
 });
 
 test('legacy site page renders when loginID session exists', function () {
-    $this->withSession(['loginID' => User::factory()->create()->id])
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
+
+    $this->withSession(['loginID' => $admin->id])
         ->get('/site')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
@@ -33,7 +37,7 @@ test('legacy site page renders when loginID session exists', function () {
 });
 
 test('legacy site admin list contract uses records total and action links', function () {
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $this->withSession(['loginID' => $admin->id])
         ->getJson('/site/list')
@@ -44,8 +48,95 @@ test('legacy site admin list contract uses records total and action links', func
         ->assertJsonFragment(['action' => '<div align="center" class="action_table_menu_site"><a href="/site_details/'.$this->site->site_id.'" class="btn-info btn-circle btn-sm bi bi-eye-fill btn_icon_table btn_icon_table_view"></a><a href="#" data-id="'.$this->site->site_id.'" class="btn-warning btn-circle btn-sm bi bi-pencil-fill btn_icon_table btn_icon_table_edit" id="editSite"></a><a href="#" data-id="'.$this->site->site_id.'" class="btn-danger btn-circle btn-sm bi bi-trash3-fill btn_icon_table btn_icon_table_delete" id="deleteSite"></a></div>']);
 });
 
+test('legacy site list supports datatables search, pagination, and draw for admin users', function () {
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
+    $secondSite = Site::factory()->create([
+        'site_code' => 'SITEB',
+        'building_description' => 'Secondary Building',
+        'division_idx' => $this->division->division_id,
+        'company_idx' => $this->company->company_id,
+    ]);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->json('GET', '/site/list', [
+            'draw' => 11,
+            'start' => 0,
+            'length' => 1,
+            'search' => ['value' => 'SITE'],
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => [
+                ['data' => 'site_code'],
+                ['data' => 'building_description'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 11)
+        ->assertJsonPath('recordsTotal', 2)
+        ->assertJsonPath('recordsFiltered', 2)
+        ->assertJsonCount(1, 'data')
+        ->assertJsonFragment(['site_code' => 'SITEA']);
+});
+
+test('legacy scoped site list supports datatables search and pagination', function () {
+    $scopedUser = User::factory()->create(['user_access' => 'Selected']);
+    $allowedSite = Site::factory()->create([
+        'site_code' => 'SITE-ALLOWED',
+        'division_idx' => $this->division->division_id,
+        'company_idx' => $this->company->company_id,
+    ]);
+    $disallowedSite = Site::factory()->create([
+        'site_code' => 'SITE-DENY',
+        'division_idx' => $this->division->division_id,
+        'company_idx' => $this->company->company_id,
+    ]);
+
+    DB::table('user_access_group')->insert([
+        'user_idx' => (string) $scopedUser->id,
+        'site_idx' => $this->site->site_id,
+        'created_by_user_idx' => 0,
+        'access_list_src' => 'CAMR',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    DB::table('user_access_group')->insert([
+        'user_idx' => (string) $scopedUser->id,
+        'site_idx' => $allowedSite->site_id,
+        'created_by_user_idx' => 0,
+        'access_list_src' => 'CAMR',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->withSession(['loginID' => $scopedUser->id])
+        ->json('GET', '/site/user/list', [
+            'draw' => 22,
+            'start' => 0,
+            'length' => 1,
+            'search' => ['value' => 'SITE'],
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => [
+                ['data' => 'site_code'],
+                ['data' => 'building_description'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 22)
+        ->assertJsonPath('recordsTotal', 2)
+        ->assertJsonPath('recordsFiltered', 2)
+        ->assertJsonCount(1, 'data');
+});
+
 test('legacy site scoped user list contract is read-only for actions', function () {
-    $scopedUser = User::factory()->create();
+    $scopedUser = User::factory()->create(['user_access' => 'Selected']);
+
+    DB::table('user_access_group')->insert([
+        'user_idx' => (string) $scopedUser->id,
+        'site_idx' => $this->site->site_id,
+        'created_by_user_idx' => 0,
+        'access_list_src' => 'CAMR',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
 
     $this->withSession(['loginID' => $scopedUser->id])
         ->getJson('/site/user/list')
@@ -55,8 +146,33 @@ test('legacy site scoped user list contract is read-only for actions', function 
         ->assertJsonPath('data.0.action', '<div align="center" class="action_table_menu_site"><a href="/site_details/'.$this->site->site_id.'" class="btn-info btn-circle btn-sm bi bi-eye-fill btn_icon_table btn_icon_table_view"></a></div>');
 });
 
+test('legacy site list is scoped to authorized sites for non-ALL users', function () {
+    $scopedUser = User::factory()->create(['user_access' => 'Selected']);
+    $outsideSite = Site::factory()->create([
+        'site_code' => 'SITE-OUT',
+        'division_idx' => $this->division->division_id,
+        'company_idx' => $this->company->company_id,
+    ]);
+
+    DB::table('user_access_group')->insert([
+        'user_idx' => (string) $scopedUser->id,
+        'site_idx' => $this->site->site_id,
+        'created_by_user_idx' => 0,
+        'access_list_src' => 'CAMR',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->withSession(['loginID' => $scopedUser->id])
+        ->getJson('/site/list')
+        ->assertOk()
+        ->assertJsonPath('recordsTotal', 1)
+        ->assertJsonFragment(['site_id' => $this->site->site_id])
+        ->assertJsonMissing(['site_id' => $outsideSite->site_id]);
+});
+
 test('legacy site creation validates required fields and persists on success', function () {
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $this->withSession(['loginID' => $admin->id])
         ->post('/create_site_post', [
@@ -86,7 +202,7 @@ test('legacy site creation validates required fields and persists on success', f
 });
 
 test('legacy site creation rejects duplicate identifiers with validation', function () {
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $this->withSession(['loginID' => $admin->id])
         ->post('/create_site_post', [
@@ -108,7 +224,7 @@ test('legacy site creation rejects duplicate identifiers with validation', funct
 });
 
 test('legacy site info endpoint returns payload by legacy id key', function () {
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $response = $this->withSession(['loginID' => $admin->id])
         ->postJson('/site_info', ['siteID' => $this->site->site_id])
@@ -120,7 +236,7 @@ test('legacy site info endpoint returns payload by legacy id key', function () {
 });
 
 test('legacy site update validates and updates', function () {
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $this->withSession(['loginID' => $admin->id])
         ->post('/update_site_post', [
@@ -154,7 +270,7 @@ test('legacy site update validates and updates', function () {
 });
 
 test('legacy site delete returns deleted confirmation', function () {
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
     $target = Site::factory()->create([
         'division_idx' => $this->division->division_id,
         'company_idx' => $this->company->company_id,
@@ -165,4 +281,26 @@ test('legacy site delete returns deleted confirmation', function () {
         ->assertOk();
 
     expect(Site::query()->find($target->site_id))->toBeNull();
+});
+
+test('legacy site delete is blocked while dependent buildings or resources exist', function () {
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
+
+    $target = Site::factory()->create([
+        'division_idx' => $this->division->division_id,
+        'company_idx' => $this->company->company_id,
+    ]);
+
+    Building::factory()->create([
+        'site_idx' => $target->site_id,
+        'building_code' => 'BLOCKED',
+        'building_description' => 'Blocking Building',
+    ]);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->post('/delete_site_confirmed', ['siteID' => $target->site_id])
+        ->assertStatus(500)
+        ->assertJson(['error' => 'Delete Failed!']);
+
+    expect(Site::query()->find($target->site_id))->not->toBeNull();
 });

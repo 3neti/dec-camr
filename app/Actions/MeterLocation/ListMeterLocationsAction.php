@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Actions\MeterLocation;
 
+use App\Actions\Support\DataTableQueryOptions;
 use App\Models\MeterLocation;
 use Illuminate\Http\Request;
 
 final class ListMeterLocationsAction
 {
+    public function __construct(
+        private readonly DataTableQueryOptions $dataTableQueryOptions,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -28,13 +33,18 @@ final class ListMeterLocationsAction
             $query->where('site_idx', $siteId);
         }
 
+        $tableMetadata = $this->dataTableQueryOptions->apply(
+            $query,
+            ['site_idx', 'location_code', 'location_description'],
+            [],
+        );
+
         $rows = $query->get();
-        $recordsTotal = $rows->count();
 
         return [
-            'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsTotal,
+            'draw' => $tableMetadata['draw'],
+            'recordsTotal' => $tableMetadata['recordsTotal'],
+            'recordsFiltered' => $tableMetadata['recordsFiltered'],
             'data' => $rows->map(fn (MeterLocation $meterLocation): array => [
                 'location_id' => $meterLocation->location_id,
                 'site_idx' => $meterLocation->site_idx,

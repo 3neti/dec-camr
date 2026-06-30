@@ -38,6 +38,16 @@ class User extends Authenticatable implements PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
+    public function isAdmin(): bool
+    {
+        return (string) $this->user_type === 'Admin';
+    }
+
+    public function hasFullSiteAccess(): bool
+    {
+        return (string) ($this->user_access ?? '') === 'ALL';
+    }
+
     /**
      * Get the attributes that should be cast.
      *

@@ -2,6 +2,7 @@
 
 use App\Models\Site;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -34,6 +35,65 @@ test('legacy user page renders through inertia when loginID exists', function ()
             ->where('title', 'User List')
             ->where('users.0.user_name', $this->allUser->name)
         );
+});
+
+test('legacy user page and write routes are blocked for non-admin users', function () {
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->get('/user')
+        ->assertForbidden();
+
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->post('/user_list')
+        ->assertForbidden();
+
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->post('/create_user_post', [
+            'user_real_name' => 'Legacy Blocked',
+            'user_name' => 'blocked-user',
+            'user_email_address' => 'blocked@example.test',
+            'user_password' => 'secret123',
+            'user_type' => 'User',
+        ])
+        ->assertForbidden();
+
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->post('/user_info', ['UserID' => $this->allUser->id])
+        ->assertForbidden();
+
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->post('/update_user_post', [
+            'userID' => $this->selectedUser->id,
+            'user_real_name' => 'Should Not Update',
+            'user_name' => 'should-not-update',
+            'user_email_address' => 'blocked2@example.test',
+            'user_type' => 'User',
+            'user_access' => 'Selected',
+        ])
+        ->assertForbidden();
+
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->post('/delete_user_confirmed', ['userID' => $this->selectedUser->id])
+        ->assertForbidden();
+
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->post('/user_account_post', [
+            'userID' => $this->selectedUser->id,
+            'user_real_name' => 'Blocked Account',
+            'user_name' => 'selected-blocked',
+            'user_email_address' => $this->selectedUser->email,
+        ])
+        ->assertForbidden();
+
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->get('/user_site_access?UserID='.$this->allUser->id)
+        ->assertForbidden();
+
+    $this->withSession(['loginID' => $this->selectedUser->id])
+        ->post('/add_user_access_post', [
+            'userID' => $this->allUser->id,
+            'site_items' => '',
+        ])
+        ->assertForbidden();
 });
 
 test('legacy user list contract uses records total and action links', function () {
@@ -150,6 +210,45 @@ test('legacy user delete returns deleted confirmation', function () {
         ->assertSee('Deleted');
 
     expect(User::query()->find($target->id))->toBeNull();
+});
+
+test('legacy user delete clears scoped access assignments', function () {
+    $admin = User::factory()->create([
+        'user_type' => 'Admin',
+        'user_access' => 'ALL',
+    ]);
+    $siteA = Site::factory()->create();
+    $siteB = Site::factory()->create();
+    $target = User::factory()->create([
+        'user_real_name' => 'Delete Access User',
+    ]);
+
+    DB::table('user_access_group')->insert([
+        [
+            'user_idx' => (string) $target->id,
+            'site_idx' => $siteA->site_id,
+            'created_by_user_idx' => $admin->id,
+            'access_list_src' => 'CAMR',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [
+            'user_idx' => (string) $target->id,
+            'site_idx' => $siteB->site_id,
+            'created_by_user_idx' => $admin->id,
+            'access_list_src' => 'CAMR',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->post('/delete_user_confirmed', ['userID' => $target->id])
+        ->assertOk()
+        ->assertSee('Deleted');
+
+    expect(User::query()->find($target->id))->toBeNull();
+    expect(DB::table('user_access_group')->where('user_idx', (string) $target->id)->count())->toBe(0);
 });
 
 test('legacy user account update updates account without requiring password', function () {

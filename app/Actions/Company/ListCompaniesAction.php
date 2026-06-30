@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Actions\Company;
 
+use App\Actions\Support\DataTableQueryOptions;
 use App\Models\Company;
 use Illuminate\Http\Request;
 
 final class ListCompaniesAction
 {
+    public function __construct(
+        private readonly DataTableQueryOptions $dataTableQueryOptions,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -18,13 +23,23 @@ final class ListCompaniesAction
             ->select('company_id', 'company_name', 'company_code', 'created_at', 'updated_at')
             ->orderBy('company_name');
 
+        $tableMetadata = $this->dataTableQueryOptions->apply(
+            $query,
+            ['company_name', 'company_code'],
+            [
+                'company_name' => 'company_name',
+                'company_code' => 'company_code',
+                'created_at_dt_format' => 'created_at',
+                'updated_at_dt_format' => 'updated_at',
+            ],
+        );
+
         $companies = $query->get();
-        $recordsTotal = $companies->count();
 
         return [
-            'draw' => (int) $request->input('draw', 0),
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsTotal,
+            'draw' => $tableMetadata['draw'],
+            'recordsTotal' => $tableMetadata['recordsTotal'],
+            'recordsFiltered' => $tableMetadata['recordsFiltered'],
             'data' => $companies->map(fn (Company $company): array => [
                 'company_id' => $company->company_id,
                 'company_name' => $company->company_name,

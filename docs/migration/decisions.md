@@ -314,3 +314,124 @@ Consequences:
 
 Characterization impact:
 - Slice 11 technical gates are clean; user-management slice remains pending only on Architect review.
+
+## 2026-06-30 - Enforce Admin Gate for User-Management Routes (Slice 13)
+
+Status: Approved
+Owner: Codex
+Slice: User Management
+
+Decision:
+Harden user-management authorization in Slice 13 by requiring legacy session validation plus admin type for all user-maintenance and user-site-access endpoints, while leaving these routes admin-only.
+
+Context:
+- Slice 13 scope requires explicit authorization semantics across protected routes and role boundaries.
+- `/user*` and `/user_site_access*` are intentionally admin-only for this migration stage.
+- User access to selected sites already has workflow effects, and route-level role enforcement reduces accidental privilege extension.
+
+Consequences:
+- The following routes now require both legacy login and admin checks:
+  - `/user`, `/user_list`, `/create_user_post`, `/user_info`, `/update_user_post`, `/delete_user_confirmed`, `/user_account_post`, `/user_site_access`, `/add_user_access_post`
+- Non-admin users receive `403 Forbidden` on those routes.
+- `/user*` and `/user_site_access*` remain admin-only.
+- `MIG-007` is now considered in review with explicit route-level role coverage.
+- `MIG-003` is moved toward closure after confirming scoped-user behavior in authenticated route and site visibility surfaces; remaining cross-slice questions are tracked separately.
+
+Characterization impact:
+- Existing Slice 11 tests were strengthened with non-admin forbidden assertions for the user-management route surface.
+
+## 2026-06-30 - DataTables Behavior Parity Route and Response Governance (Slice 14)
+
+Status: Proposed
+Owner: Codex
+Slice: Cross-cutting
+
+Decision:
+Stabilize and verify legacy list endpoint behavior (search, sorting, pagination, counts, scoped visibility, action markers) for the migrated maintenance list surfaces before declaring Slice 14 complete.
+
+Context:
+- Slice 14 introduces explicit DataTables-equivalent behavior across `/company_list`, `/division_list`, `/configuration_file_list`, `/site/list`, `/site/user/list`, `/getBuilding`, `/getMeterLocation`, `/getGateway`, `/getMeter`, and `/user_list`.
+- Shared DataTable metadata normalization (`app/Actions/Support/DataTableQueryOptions.php`) is now used by the list actions for request-driven ordering and paging.
+- Feature tests now cover `draw`, `recordsTotal`, `recordsFiltered`, and filtered pagination for these endpoints, including scoped visibility checks where applicable.
+
+Consequences:
+- List endpoint payloads now follow stable `draw`/`recordsTotal`/`recordsFiltered` keys with scoped filtering where required.
+- Migration still requires a deterministic full suite pass before Slice 14 can be treated as fully complete.
+- Any future DataTables behavior changes should be covered by list-surface tests before being accepted.
+
+Characterization impact:
+- Slice 14 behavior is now directly test-bound and traceable through the impacted feature tests.
+
+## 2026-06-30 - Destructive CRUD Edge-Case Classification (Slice 15)
+
+Status: Approved
+Owner: Codex
+Slice: Cross-cutting
+
+Decision:
+Record explicit handling decisions for destructive edge cases introduced by Slice 15 hardening.
+
+Context:
+- Slice 15 added delete-blocking checks and transactional behavior to prevent data-loss.
+- Four destructive edge cases required explicit classification before architect review:
+  1) logged-in admin delete
+  2) last admin delete
+  3) missing/nonexistent ID delete
+  4) dependency-blocked delete response semantics
+
+Consequences:
+- Edge-case classification:
+  - Deleting the currently logged-in admin user: Covered (allowed by current controller/action path).
+  - Deleting the last remaining admin user: Covered (allowed by current action/controller path; no explicit guard currently present).
+  - Deleting missing/nonexistent IDs: Backlogged (behavior is inconsistent with legacy error-shape; requires architect decision on 404 vs legacy-compatible 500/other contract).
+  - Dependency-blocked deletes returning 500: Covered (current implementation returns 500 and `Delete Failed!` consistently when hard references exist).
+
+Characterization impact:
+- Full Slice 15 feature coverage remains green; remaining risk is unresolved legacy compatibility for missing-ID responses.
+
+## 2026-06-30 - Approve Slice 15 with Residual Missing-ID Cleanup
+
+Status: Approved
+Owner: Codex
+Slice: Cross-cutting
+
+Decision:
+Slice 15 destructive CRUD hardening is approved as the core slice outcome.
+
+Context:
+- The slice has passed technical gates and covers the primary destructive integrity risks:
+  - deleting the currently logged-in admin
+  - deleting the last remaining admin
+  - dependency-blocked deletions
+- The route-level delete behavior for missing/nonexistent resource IDs is intentionally deferred as a follow-up backlog item (`MIG-004`).
+
+Consequences:
+- Slice 15 is treated as approved for migration progression.
+- The implementation decision is that this residual missing-ID inconsistency does not block slice approval.
+- A follow-up backlog-driven hardening item remains required to align error semantics if legacy contract requires a 500/error message path.
+
+Characterization impact:
+- Slice 15 remains open only for non-blocking clean-up and does not block release movement to Slice 16.
+
+## 2026-07-01 - Approve Reports Hardening With Residual Differences
+
+Status: Approved
+Owner: Architect
+Slice: Reports
+
+Decision:
+Approve Slice 16 Reports Hardening as migration-complete with residual report-parity differences.
+
+Context:
+- Representative report route compatibility, validation behavior, scoped access behavior, payload shape, boundary behavior, and representative aggregation/XLSX assertions are now covered in `tests/Feature/ReportTest.php`.
+- Representative workbook assertions include sheet existence, legacy-compatible filename/content-type, representative headers, and representative business fields.
+- Full acceptance gates are green for Slice 16 and the slice is no longer considered scaffold-only.
+
+Consequences:
+- `MIG-002` is moved to `Accepted with Residual Differences`.
+- Remaining work is tracking for exhaustive parity improvements rather than representative behavioral correctness.
+- Slice 16 is eligible to progress to production-hardening governance with residual risks explicitly visible in `MIG-002`.
+
+Characterization impact:
+- `tests/Feature/ReportTest.php` is now the migration-complete representative characterization artifact for Slice 16.
+- `docs/migration/legacy-test-inventory.md` report row remains `Passing` with explicit residual-work notes.

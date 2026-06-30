@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Building;
+use App\Models\Meter;
 use App\Models\Site;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -42,6 +43,35 @@ test('legacy building list contract can be filtered by site and includes action 
         ->assertJsonPath('recordsFiltered', 1)
         ->assertJsonPath('data.0.building_code', $this->building->building_code)
         ->assertJsonFragment(['action' => '<a href="#" data-id="'.$this->building->building_id.'" class="bi bi-pencil-fill btn_icon_table btn_icon_table_edit" id="editBuilding" title="Update Building Information"></a> <a href="#" data-id="'.$this->building->building_id.'" class="bi bi-trash3-fill btn_icon_table btn_icon_table_delete" id="deleteBuilding" title="Delete Building Information"></a>']);
+});
+
+test('legacy building list supports datatables search, pagination, and draw', function () {
+    Building::factory()->create([
+        'site_idx' => $this->site->site_id,
+        'building_code' => 'ZZZ-BLDG',
+        'building_description' => 'Secondary',
+    ]);
+
+    $admin = User::factory()->create();
+
+    $this->withSession(['loginID' => $admin->id])
+        ->json('GET', '/getBuilding', [
+            'siteID' => $this->site->site_id,
+            'draw' => 15,
+            'start' => 0,
+            'length' => 1,
+            'search' => ['value' => 'SITEA'],
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => [
+                ['data' => 'building_code'],
+                ['data' => 'building_description'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 15)
+        ->assertJsonPath('recordsTotal', 2)
+        ->assertJsonPath('recordsFiltered', 2)
+        ->assertJsonCount(1, 'data');
 });
 
 test('legacy building create validates required fields and persists on success', function () {
@@ -150,4 +180,25 @@ test('legacy building delete returns deleted confirmation', function () {
         ->assertOk();
 
     expect(Building::query()->find($target->building_id))->toBeNull();
+});
+
+test('legacy building delete is blocked while dependent meters exist', function () {
+    $admin = User::factory()->create();
+    $target = Building::factory()->create([
+        'site_idx' => $this->site->site_id,
+        'building_code' => 'BLDG-DEL',
+        'building_description' => 'Blocking Building',
+    ]);
+
+    Meter::factory()->create([
+        'building_idx' => $target->building_id,
+        'site_idx' => $this->site->site_id,
+    ]);
+
+    $this->withSession(['loginID' => $admin->id])
+        ->post('/delete_building_confirmed', ['buildingID' => $target->building_id])
+        ->assertStatus(500)
+        ->assertJson(['error' => 'Delete Failed!']);
+
+    expect(Building::query()->find($target->building_id))->not->toBeNull();
 });

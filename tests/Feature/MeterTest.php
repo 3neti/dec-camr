@@ -74,6 +74,46 @@ test('legacy meter list includes record contract', function () {
         ]);
 });
 
+test('legacy meter list supports datatables search, pagination, and draw', function () {
+    $secondLocation = MeterLocation::factory()->create([
+        'site_idx' => $this->site->site_id,
+        'location_code' => 'ER-B',
+        'location_description' => 'Location B',
+    ]);
+
+    Meter::factory()->create([
+        'site_idx' => $this->site->site_id,
+        'site_code' => $this->site->site_code,
+        'rtu_idx' => $this->gateway->rtu_id,
+        'location_idx' => $secondLocation->location_id,
+        'config_idx' => $this->configurationFile->config_id,
+        'meter_name' => 'MTR-XYZ',
+        'meter_name_addressable' => 2,
+        'meter_default_name' => '2',
+    ]);
+
+    $admin = User::factory()->create();
+
+    $this->withSession(['loginID' => $admin->id])
+        ->json('GET', '/getMeter', [
+            'siteID' => $this->site->site_id,
+            'draw' => 18,
+            'start' => 0,
+            'length' => 1,
+            'search' => ['value' => 'MTR'],
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => [
+                ['data' => 'meter_name'],
+                ['data' => 'meter_default_name'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 18)
+        ->assertJsonPath('recordsTotal', 2)
+        ->assertJsonPath('recordsFiltered', 2)
+        ->assertJsonCount(1, 'data');
+});
+
 test('legacy meter creation validates required fields and creates on success', function () {
     $admin = User::factory()->create();
 
@@ -185,7 +225,10 @@ test('legacy meter delete returns deleted confirmation', function () {
         ->assertOk()
         ->assertSee('Deleted');
 
+    $this->gateway->refresh();
+
     expect(Meter::query()->find($target->meter_id))->toBeNull();
+    expect((int) $this->gateway->update_rtu)->toBe(1);
 });
 
 test('legacy meter CSV import validates file then imports valid payload', function () {
