@@ -26,6 +26,8 @@ class BuildDashboardDataContractAction
 
     private const METER_HEALTH_LIMIT = 6;
 
+    private const TIMELINE_EVENT_LIMIT = 8;
+
     /**
      * @return array<string, mixed>
      */
@@ -265,6 +267,123 @@ class BuildDashboardDataContractAction
                 ->take(self::METER_HEALTH_LIMIT)
                 ->values()
                 ->all(),
+            'telemetryTimeline' => collect([
+                ...DB::table('meter_data')
+                    ->leftJoin('meter_details', 'meter_data.meter_id', '=', 'meter_details.meter_id')
+                    ->leftJoin('meter_rtu', 'meter_details.rtu_idx', '=', 'meter_rtu.rtu_id')
+                    ->select([
+                        'meter_data.meter_id',
+                        'meter_data.datetime',
+                        'meter_details.meter_name',
+                        'meter_details.site_code',
+                        'meter_details.location_idx',
+                        'meter_rtu.gateway_sn',
+                    ])
+                    ->orderByDesc('meter_data.datetime')
+                    ->limit(4)
+                    ->get()
+                    ->map(function (object $row) use ($onlineCutoff, $offlineCutoff): array {
+                        $occurredAt = CarbonImmutable::parse((string) $row->datetime);
+
+                        return [
+                            'id' => sprintf('telemetry:%s:%s', (string) $row->meter_id, $occurredAt->toIso8601String()),
+                            'eventType' => 'telemetry_received',
+                            'resource' => 'telemetry',
+                            'severity' => $this->timelineSeverity(
+                                $this->healthState($occurredAt, $onlineCutoff, $offlineCutoff),
+                            ),
+                            'subject' => $row->meter_name !== null && trim((string) $row->meter_name) !== ''
+                                ? (string) $row->meter_name
+                                : sprintf('Meter %s', (string) $row->meter_id),
+                            'context' => $row->site_code !== null ? (string) $row->site_code : null,
+                            'title' => 'Telemetry received',
+                            'description' => sprintf(
+                                'Meter %s reported%s%s.',
+                                (string) $row->meter_id,
+                                $row->location_idx !== null ? sprintf(' from location %s', (string) $row->location_idx) : '',
+                                $row->gateway_sn !== null ? sprintf(' through gateway %s', (string) $row->gateway_sn) : '',
+                            ),
+                            'occurredAt' => $occurredAt->toIso8601String(),
+                        ];
+                    })
+                    ->all(),
+                ...DB::table('meter_rtu')
+                    ->select([
+                        'rtu_id',
+                        'gateway_sn',
+                        'site_code',
+                        'last_log_update',
+                        'update_rtu',
+                        'update_rtu_location',
+                        'update_rtu_ssh',
+                        'update_rtu_force_lp',
+                    ])
+                    ->get()
+                    ->flatMap(function (object $row) use ($onlineCutoff, $offlineCutoff): array {
+                        $events = [];
+                        $lastLogUpdate = $this->parseLegacyTimestamp($row->last_log_update);
+
+                        if ($lastLogUpdate !== null) {
+                            $status = $this->healthState($lastLogUpdate, $onlineCutoff, $offlineCutoff);
+
+                            if ($status !== 'online') {
+                                $events[] = [
+                                    'id' => sprintf('%s:%s', $status, (string) $row->rtu_id),
+                                    'eventType' => sprintf('gateway_%s', $status),
+                                    'resource' => 'gateway',
+                                    'severity' => $this->timelineSeverity($status),
+                                    'subject' => (string) $row->gateway_sn,
+                                    'context' => $row->site_code !== null ? (string) $row->site_code : null,
+                                    'title' => sprintf('Gateway %s', $status === 'offline' ? 'offline' : 'stale'),
+                                    'description' => $status === 'offline'
+                                        ? 'Gateway communication is beyond the offline threshold.'
+                                        : 'Gateway communication is outside the healthy freshness window.',
+                                    'occurredAt' => $lastLogUpdate->toIso8601String(),
+                                ];
+                            }
+                        }
+
+                        $pendingUpdates = $this->pendingUpdateLabels($row);
+
+                        if ($pendingUpdates !== []) {
+                            $events[] = [
+                                'id' => sprintf('pending:%s', (string) $row->rtu_id),
+                                'eventType' => 'pending_update',
+                                'resource' => 'gateway',
+                                'severity' => 'warning',
+                                'subject' => (string) $row->gateway_sn,
+                                'context' => $row->site_code !== null ? (string) $row->site_code : null,
+                                'title' => 'Pending gateway update',
+                                'description' => sprintf(
+                                    'Waiting for %s.',
+                                    implode(', ', $pendingUpdates),
+                                ),
+                                'occurredAt' => $lastLogUpdate?->toIso8601String(),
+                            ];
+                        }
+
+                        return $events;
+                    })
+                    ->all(),
+            ])
+                ->sort(function (array $left, array $right): int {
+                    $timestampComparison = strcmp($right['occurredAt'] ?? '', $left['occurredAt'] ?? '');
+
+                    if ($timestampComparison !== 0) {
+                        return $timestampComparison;
+                    }
+
+                    $rankComparison = $this->timelineEventRank($left['eventType']) <=> $this->timelineEventRank($right['eventType']);
+
+                    if ($rankComparison !== 0) {
+                        return $rankComparison;
+                    }
+
+                    return strcmp($left['subject'], $right['subject']);
+                })
+                ->take(self::TIMELINE_EVENT_LIMIT)
+                ->values()
+                ->all(),
             'reportReadiness' => [
                 'raw' => [
                     'state' => $this->reportState($reportWindowReadings, $historicTelemetryCount),
@@ -402,6 +521,25 @@ class BuildDashboardDataContractAction
             'offline' => 0,
             'stale' => 1,
             default => 2,
+        };
+    }
+
+    private function timelineSeverity(string $status): string
+    {
+        return match ($status) {
+            'offline' => 'critical',
+            'stale' => 'warning',
+            default => 'info',
+        };
+    }
+
+    private function timelineEventRank(string $eventType): int
+    {
+        return match ($eventType) {
+            'gateway_offline' => 0,
+            'gateway_stale' => 1,
+            'pending_update' => 2,
+            default => 3,
         };
     }
 }

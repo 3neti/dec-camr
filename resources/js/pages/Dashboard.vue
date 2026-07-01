@@ -20,6 +20,7 @@ import OperatorPage from '@/components/operator/OperatorPage.vue';
 import QuickActionGrid from '@/components/operator/QuickActionGrid.vue';
 import RecentTelemetryList from '@/components/operator/RecentTelemetryList.vue';
 import StatusChip from '@/components/operator/StatusChip.vue';
+import TelemetryTimeline from '@/components/operator/TelemetryTimeline.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { site } from '@/routes';
 
@@ -96,6 +97,17 @@ type DashboardProps = {
         meterStatus: string;
         gatewaySn: string | null;
         gatewayMac: string | null;
+    }>;
+    telemetryTimeline: Array<{
+        id: string;
+        eventType: string;
+        resource: 'gateway' | 'meter' | 'telemetry';
+        severity: 'critical' | 'warning' | 'info';
+        subject: string;
+        context: string | null;
+        title: string;
+        description: string;
+        occurredAt: string | null;
     }>;
     reportReadiness: {
         raw: {
@@ -331,6 +343,18 @@ const meterHealthItems = computed(() =>
     props.meterHealth.map((item) => ({
         ...item,
         href: meter(),
+    })),
+);
+
+const telemetryTimelineItems = computed(() =>
+    props.telemetryTimeline.map((item) => ({
+        ...item,
+        href:
+            item.resource === 'gateway'
+                ? gateway()
+                : item.resource === 'meter'
+                  ? meter()
+                  : rawReport(),
     })),
 );
 
@@ -649,6 +673,8 @@ defineOptions({
                 <GatewayHealthList :items="gatewayHealthItems" />
 
                 <MeterHealthGrid :items="meterHealthItems" />
+
+                <TelemetryTimeline :items="telemetryTimelineItems" />
 
                 <Card class="py-5">
                     <CardHeader class="px-5 pb-0">
