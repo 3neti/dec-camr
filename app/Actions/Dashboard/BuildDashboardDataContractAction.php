@@ -80,6 +80,58 @@ class BuildDashboardDataContractAction
         $historicTelemetryCount = MeterData::query()->count();
         $reportWindowReadings = (clone $reportTelemetryBaseQuery)->count();
         $reportWindowMeters = (clone $reportTelemetryBaseQuery)->distinct()->count('meter_id');
+        $operationalCommandTarget = Gateway::query()
+            ->get([
+                'gateway_sn',
+                'gateway_mac',
+                'gateway_description',
+                'site_code',
+                'last_log_update',
+                'update_rtu',
+                'update_rtu_location',
+                'update_rtu_ssh',
+                'update_rtu_force_lp',
+            ])
+            ->map(function (Gateway $gateway) use ($onlineCutoff, $offlineCutoff): array {
+                $lastLogUpdate = $this->parseLegacyTimestamp($gateway->last_log_update);
+                $pendingUpdates = $this->pendingUpdateLabels($gateway);
+                $status = $lastLogUpdate === null
+                    ? 'offline'
+                    : $this->healthState($lastLogUpdate, $onlineCutoff, $offlineCutoff);
+
+                return [
+                    'gatewaySn' => (string) $gateway->gateway_sn,
+                    'gatewayMac' => (string) $gateway->gateway_mac,
+                    'description' => $gateway->gateway_description !== null ? (string) $gateway->gateway_description : null,
+                    'siteCode' => $gateway->site_code !== null ? (string) $gateway->site_code : null,
+                    'lastLogUpdate' => $lastLogUpdate?->toIso8601String(),
+                    'status' => $status,
+                    'pendingUpdates' => $pendingUpdates,
+                    'pendingUpdateCount' => count($pendingUpdates),
+                ];
+            })
+            ->sort(function (array $left, array $right): int {
+                $pendingComparison = $right['pendingUpdateCount'] <=> $left['pendingUpdateCount'];
+
+                if ($pendingComparison !== 0) {
+                    return $pendingComparison;
+                }
+
+                $statusComparison = $this->gatewayStatusRank($left['status']) <=> $this->gatewayStatusRank($right['status']);
+
+                if ($statusComparison !== 0) {
+                    return $statusComparison;
+                }
+
+                $timestampComparison = strcmp($right['lastLogUpdate'] ?? '', $left['lastLogUpdate'] ?? '');
+
+                if ($timestampComparison !== 0) {
+                    return $timestampComparison;
+                }
+
+                return strcmp($left['gatewaySn'], $right['gatewaySn']);
+            })
+            ->first();
 
         return [
             'context' => [
@@ -122,6 +174,14 @@ class BuildDashboardDataContractAction
                 'location' => Gateway::query()->where('update_rtu_location', 1)->count(),
                 'ssh' => Gateway::query()->where('update_rtu_ssh', 1)->count(),
                 'forceLoadProfile' => Gateway::query()->where('update_rtu_force_lp', 1)->count(),
+            ],
+            'operationalCommandBar' => $operationalCommandTarget === null ? null : [
+                'gatewaySn' => $operationalCommandTarget['gatewaySn'],
+                'gatewayMac' => $operationalCommandTarget['gatewayMac'],
+                'description' => $operationalCommandTarget['description'],
+                'siteCode' => $operationalCommandTarget['siteCode'],
+                'status' => $operationalCommandTarget['status'],
+                'commands' => $this->operationalCommandsForGateway($operationalCommandTarget),
             ],
             'gatewayHealth' => collect(DB::table('meter_rtu')
                 ->leftJoin('meter_details', 'meter_rtu.rtu_id', '=', 'meter_details.rtu_idx')
@@ -522,6 +582,92 @@ class BuildDashboardDataContractAction
             'stale' => 1,
             default => 2,
         };
+    }
+
+    /**
+     * @param array{
+     *     gatewaySn: string,
+     *     gatewayMac: string,
+     *     description: ?string,
+     *     siteCode: ?string,
+     *     lastLogUpdate: ?string,
+     *     status: string,
+     *     pendingUpdates: list<string>,
+     *     pendingUpdateCount: int
+     * } $gateway
+     * @return list<array{
+     *     key: string,
+     *     title: string,
+     *     description: string,
+     *     routeKey: string,
+     *     enabled: bool,
+     *     disabledReason: ?string
+     * }>
+     */
+    private function operationalCommandsForGateway(array $gateway): array
+    {
+        $hasCsv = in_array('CSV', $gateway['pendingUpdates'], true);
+        $hasLocation = in_array('Location', $gateway['pendingUpdates'], true);
+        $hasForceLp = in_array('Force LP', $gateway['pendingUpdates'], true);
+
+        return [
+            [
+                'key' => 'csv-download',
+                'title' => 'Download CSV payload',
+                'description' => 'Open the gateway CSV payload endpoint for the current command target.',
+                'routeKey' => 'get_content_csv',
+                'enabled' => $hasCsv,
+                'disabledReason' => $hasCsv ? null : 'No pending CSV update is currently flagged for this gateway.',
+            ],
+            [
+                'key' => 'csv-reset',
+                'title' => 'Reset CSV update flag',
+                'description' => 'Clear the current CSV update flag through the legacy RTU endpoint.',
+                'routeKey' => 'reset_update_csv',
+                'enabled' => $hasCsv,
+                'disabledReason' => $hasCsv ? null : 'CSV reset is only meaningful when a CSV update flag is pending.',
+            ],
+            [
+                'key' => 'location-download',
+                'title' => 'Download location payload',
+                'description' => 'Open the gateway location payload endpoint for the current command target.',
+                'routeKey' => 'get_content_location',
+                'enabled' => $hasLocation,
+                'disabledReason' => $hasLocation ? null : 'No pending location update is currently flagged for this gateway.',
+            ],
+            [
+                'key' => 'location-reset',
+                'title' => 'Reset location update flag',
+                'description' => 'Clear the current location update flag through the legacy RTU endpoint.',
+                'routeKey' => 'reset_update_location',
+                'enabled' => $hasLocation,
+                'disabledReason' => $hasLocation ? null : 'Location reset is only meaningful when a location update flag is pending.',
+            ],
+            [
+                'key' => 'force-lp-check',
+                'title' => 'Check force LP flag',
+                'description' => 'Read the current force load profile flag for the selected gateway.',
+                'routeKey' => 'force_lp',
+                'enabled' => true,
+                'disabledReason' => null,
+            ],
+            [
+                'key' => 'force-lp-reset',
+                'title' => 'Reset force LP flag',
+                'description' => 'Clear the current force load profile flag through the legacy RTU endpoint.',
+                'routeKey' => 'reset_force_lp',
+                'enabled' => $hasForceLp,
+                'disabledReason' => $hasForceLp ? null : 'Force LP reset is only meaningful when a force LP flag is pending.',
+            ],
+            [
+                'key' => 'remote-ssh-check',
+                'title' => 'Check remote SSH flag',
+                'description' => 'Read the current remote SSH flag for the selected gateway.',
+                'routeKey' => 'remote_ssh',
+                'enabled' => true,
+                'disabledReason' => null,
+            ],
+        ];
     }
 
     private function timelineSeverity(string $status): string

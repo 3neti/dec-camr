@@ -16,6 +16,7 @@ import AttentionList from '@/components/operator/AttentionList.vue';
 import GatewayHealthList from '@/components/operator/GatewayHealthList.vue';
 import KpiCard from '@/components/operator/KpiCard.vue';
 import MeterHealthGrid from '@/components/operator/MeterHealthGrid.vue';
+import OperationalCommandBar from '@/components/operator/OperationalCommandBar.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import QuickActionGrid from '@/components/operator/QuickActionGrid.vue';
 import RecentTelemetryList from '@/components/operator/RecentTelemetryList.vue';
@@ -23,6 +24,15 @@ import StatusChip from '@/components/operator/StatusChip.vue';
 import TelemetryTimeline from '@/components/operator/TelemetryTimeline.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { site } from '@/routes';
+import {
+    force_lp,
+    get_content_csv,
+    get_content_location,
+    remote_ssh,
+    reset_force_lp,
+    reset_update_csv,
+    reset_update_location,
+} from '@/routes/rtu';
 
 type ReportState = 'ready' | 'partial' | 'empty';
 type TelemetryStatus = 'online' | 'stale' | 'offline';
@@ -71,6 +81,21 @@ type DashboardProps = {
         ssh: number;
         forceLoadProfile: number;
     };
+    operationalCommandBar: {
+        gatewaySn: string;
+        gatewayMac: string;
+        description: string | null;
+        siteCode: string | null;
+        status: TelemetryStatus;
+        commands: Array<{
+            key: string;
+            title: string;
+            description: string;
+            routeKey: string;
+            enabled: boolean;
+            disabledReason: string | null;
+        }>;
+    } | null;
     gatewayHealth: Array<{
         id: number;
         gatewaySn: string;
@@ -357,6 +382,60 @@ const telemetryTimelineItems = computed(() =>
                   : rawReport(),
     })),
 );
+
+const operationalCommandTarget = computed(() => {
+    if (props.operationalCommandBar === null) {
+        return null;
+    }
+
+    return {
+        gatewaySn: props.operationalCommandBar.gatewaySn,
+        gatewayMac: props.operationalCommandBar.gatewayMac,
+        description: props.operationalCommandBar.description,
+        siteCode: props.operationalCommandBar.siteCode,
+        status: props.operationalCommandBar.status,
+    };
+});
+
+const operationalCommands = computed(() => {
+    if (props.operationalCommandBar === null) {
+        return [];
+    }
+
+    const mac = props.operationalCommandBar.gatewayMac;
+
+    return props.operationalCommandBar.commands.map((command) => {
+        const href = (() => {
+            switch (command.routeKey) {
+                case 'get_content_csv':
+                    return get_content_csv.url({ mac });
+                case 'reset_update_csv':
+                    return reset_update_csv.url({ mac });
+                case 'get_content_location':
+                    return get_content_location.url({ mac });
+                case 'reset_update_location':
+                    return reset_update_location.url({ mac });
+                case 'force_lp':
+                    return force_lp.url({ mac });
+                case 'reset_force_lp':
+                    return reset_force_lp.url({ mac });
+                case 'remote_ssh':
+                    return remote_ssh.url({ mac });
+                default:
+                    return '#';
+            }
+        })();
+
+        return {
+            key: command.key,
+            title: command.title,
+            description: command.description,
+            enabled: command.enabled,
+            disabledReason: command.disabledReason,
+            href,
+        };
+    });
+});
 
 const quickActions = computed(() => {
     const role = props.context.user.role.toLowerCase();
@@ -675,6 +754,11 @@ defineOptions({
                 <MeterHealthGrid :items="meterHealthItems" />
 
                 <TelemetryTimeline :items="telemetryTimelineItems" />
+
+                <OperationalCommandBar
+                    :target="operationalCommandTarget"
+                    :commands="operationalCommands"
+                />
 
                 <Card class="py-5">
                     <CardHeader class="px-5 pb-0">
