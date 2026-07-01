@@ -24,6 +24,8 @@ class BuildDashboardDataContractAction
 
     private const GATEWAY_HEALTH_LIMIT = 6;
 
+    private const METER_HEALTH_LIMIT = 6;
+
     /**
      * @return array<string, mixed>
      */
@@ -201,6 +203,66 @@ class BuildDashboardDataContractAction
                     return strcmp($left['gatewaySn'], $right['gatewaySn']);
                 })
                 ->take(self::GATEWAY_HEALTH_LIMIT)
+                ->values()
+                ->all(),
+            'meterHealth' => collect(DB::table('meter_details')
+                ->leftJoin('meter_rtu', 'meter_details.rtu_idx', '=', 'meter_rtu.rtu_id')
+                ->select([
+                    'meter_details.meter_id',
+                    'meter_details.meter_name',
+                    'meter_details.meter_default_name',
+                    'meter_details.meter_status',
+                    'meter_details.site_code',
+                    'meter_details.location_idx',
+                    'meter_details.last_log_update',
+                    'meter_rtu.gateway_sn',
+                    'meter_rtu.gateway_mac',
+                ])
+                ->whereRaw('UPPER(meter_details.meter_status) = ?', ['ACTIVE'])
+                ->get()
+                ->map(function (object $row) use ($onlineCutoff, $offlineCutoff): array {
+                    $lastLogUpdate = $this->parseLegacyTimestamp($row->last_log_update);
+                    $status = $lastLogUpdate === null
+                        ? 'offline'
+                        : $this->healthState($lastLogUpdate, $onlineCutoff, $offlineCutoff);
+
+                    return [
+                        'id' => (int) $row->meter_id,
+                        'meterId' => (string) $row->meter_id,
+                        'meterName' => $row->meter_name !== null ? (string) $row->meter_name : null,
+                        'defaultName' => $row->meter_default_name !== null ? (string) $row->meter_default_name : null,
+                        'siteCode' => $row->site_code !== null ? (string) $row->site_code : null,
+                        'locationId' => $row->location_idx !== null ? (string) $row->location_idx : null,
+                        'lastLogUpdate' => $lastLogUpdate?->toIso8601String(),
+                        'status' => $status,
+                        'meterStatus' => (string) $row->meter_status,
+                        'gatewaySn' => $row->gateway_sn !== null ? (string) $row->gateway_sn : null,
+                        'gatewayMac' => $row->gateway_mac !== null ? (string) $row->gateway_mac : null,
+                    ];
+                })
+                ->all())
+                ->sort(function (array $left, array $right): int {
+                    $statusComparison = $this->gatewayStatusRank($left['status']) <=> $this->gatewayStatusRank($right['status']);
+
+                    if ($statusComparison !== 0) {
+                        return $statusComparison;
+                    }
+
+                    $nullComparison = ($left['lastLogUpdate'] === null ? 0 : 1) <=> ($right['lastLogUpdate'] === null ? 0 : 1);
+
+                    if ($nullComparison !== 0) {
+                        return $nullComparison;
+                    }
+
+                    $timestampComparison = strcmp($left['lastLogUpdate'] ?? '', $right['lastLogUpdate'] ?? '');
+
+                    if ($timestampComparison !== 0) {
+                        return $timestampComparison;
+                    }
+
+                    return strcmp($left['meterName'] ?? $left['meterId'], $right['meterName'] ?? $right['meterId']);
+                })
+                ->take(self::METER_HEALTH_LIMIT)
                 ->values()
                 ->all(),
             'reportReadiness' => [

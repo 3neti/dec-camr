@@ -15,6 +15,7 @@ import { user } from '@/actions/App/Http/Controllers/UserController';
 import AttentionList from '@/components/operator/AttentionList.vue';
 import GatewayHealthList from '@/components/operator/GatewayHealthList.vue';
 import KpiCard from '@/components/operator/KpiCard.vue';
+import MeterHealthGrid from '@/components/operator/MeterHealthGrid.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import QuickActionGrid from '@/components/operator/QuickActionGrid.vue';
 import RecentTelemetryList from '@/components/operator/RecentTelemetryList.vue';
@@ -82,6 +83,19 @@ type DashboardProps = {
         activeMeterCount: number;
         pendingUpdates: string[];
         hasPendingUpdates: boolean;
+    }>;
+    meterHealth: Array<{
+        id: number;
+        meterId: string;
+        meterName: string | null;
+        defaultName: string | null;
+        siteCode: string | null;
+        locationId: string | null;
+        lastLogUpdate: string | null;
+        status: TelemetryStatus;
+        meterStatus: string;
+        gatewaySn: string | null;
+        gatewayMac: string | null;
     }>;
     reportReadiness: {
         raw: {
@@ -310,6 +324,13 @@ const gatewayHealthItems = computed(() =>
     props.gatewayHealth.map((item) => ({
         ...item,
         href: gateway(),
+    })),
+);
+
+const meterHealthItems = computed(() =>
+    props.meterHealth.map((item) => ({
+        ...item,
+        href: meter(),
     })),
 );
 
@@ -626,6 +647,8 @@ defineOptions({
                 />
 
                 <GatewayHealthList :items="gatewayHealthItems" />
+
+                <MeterHealthGrid :items="meterHealthItems" />
 
                 <Card class="py-5">
                     <CardHeader class="px-5 pb-0">
