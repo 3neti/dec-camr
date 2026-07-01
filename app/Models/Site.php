@@ -19,6 +19,7 @@ class Site extends Model
         'building_idx',
         'site_code',
         'building_description',
+        'last_log_update',
         'created_by_user_idx',
         'modified_by_user_idx',
     ];

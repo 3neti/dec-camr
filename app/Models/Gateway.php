@@ -28,6 +28,12 @@ class Gateway extends Model
         'idf_number',
         'switch_name',
         'idf_port',
+        'update_rtu',
+        'update_rtu_location',
+        'update_rtu_ssh',
+        'update_rtu_force_lp',
+        'last_log_update',
+        'soft_rev',
         'created_by_user_idx',
         'modified_by_user_idx',
     ];
