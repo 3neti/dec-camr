@@ -5,11 +5,8 @@ import {
     FileText,
     GaugeCircle,
     LayoutGrid,
-    Lock,
     Power,
-    Settings,
     Settings2,
-    ShieldAlert,
     UserCog,
     Users,
 } from '@lucide/vue';
@@ -135,26 +132,6 @@ const sections: OperatorShellNavSection[] = [
                 icon: UserCog,
                 adminOnly: true,
                 quickAccess: false,
-            },
-        ],
-    },
-    {
-        title: 'Settings',
-        items: [
-            {
-                title: 'Profile',
-                href: '/settings/profile',
-                icon: Settings,
-            },
-            {
-                title: 'Security',
-                href: '/settings/security',
-                icon: Lock,
-            },
-            {
-                title: 'Appearance',
-                href: '/settings/appearance',
-                icon: ShieldAlert,
             },
         ],
     },

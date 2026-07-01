@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+import OperatorPage from '@/components/operator/OperatorPage.vue';
 
 type ConfigurationFile = {
     config_id: number;
@@ -16,11 +17,7 @@ const csrfToken = page.props.csrfToken as string;
 </script>
 
 <template>
-    <Head :title="title" />
-
-    <div class="space-y-6">
-        <h1 class="text-2xl font-semibold">{{ title }}</h1>
-
+    <OperatorPage :title="title">
         <form
             class="flex gap-3"
             method="POST"
@@ -55,5 +52,5 @@ const csrfToken = page.props.csrfToken as string;
                 </tr>
             </tbody>
         </table>
-    </div>
+    </OperatorPage>
 </template>
