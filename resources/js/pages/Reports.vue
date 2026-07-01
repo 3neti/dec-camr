@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
+import { usePage, useRemember } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import {
     downloadOfflineGateway,
@@ -7,6 +7,7 @@ import {
     generateBuildingList,
     generateMeterList,
 } from '@/actions/App/Http/Controllers/ReportController';
+import DownloadShelf from '@/components/operator/DownloadShelf.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import ReportFamilySelector from '@/components/operator/ReportFamilySelector.vue';
 import ReportFilterPanel from '@/components/operator/ReportFilterPanel.vue';
@@ -68,12 +69,30 @@ type ReportPreviewSummaryContract = {
     notes: string[];
 };
 
+type DownloadShelfContract = {
+    title: string;
+    description: string;
+    emptyTitle: string;
+    emptyDescription: string;
+};
+
+type DownloadShelfEntry = {
+    id: string;
+    reportFamily: string;
+    filename: string;
+    status: 'Complete';
+    generatedAt: string;
+    fileType: string;
+    filterSummary: string;
+};
+
 const props = defineProps<{
     title: string;
     reportType: ReportType;
     reportFamilies: ReportFamily[];
     filterPanel: ReportFilterPanelContract;
     previewSummary: ReportPreviewSummaryContract;
+    downloadShelf: DownloadShelfContract;
 }>();
 
 const page = usePage<{ csrfToken?: string }>();
@@ -85,6 +104,7 @@ const filterValues = ref<Record<string, string>>(
         ),
     ),
 );
+const rememberedShelfEntries = useRemember<DownloadShelfEntry[]>([], `report-download-shelf:${props.reportType}`);
 
 const settingsActions = [
     { label: 'Build Building List', route: generateBuildingList.form() },
@@ -156,6 +176,44 @@ const previewMetrics = computed(() => [
         value: props.previewSummary.unitsLabel,
     },
 ]);
+
+const shelfEntries = computed(() =>
+    Array.isArray(rememberedShelfEntries) ? rememberedShelfEntries : rememberedShelfEntries.value,
+);
+
+const compactFilterSummary = (params: Record<string, string>): string => {
+    const parts = [
+        params.site_id?.trim() ? `Site ${params.site_id.trim()}` : null,
+        params.meter_id?.trim() ? `Meter ${params.meter_id.trim()}` : null,
+        params.start_date?.trim() ? `From ${params.start_date.trim()}${params.start_time?.trim() ? ` ${params.start_time.trim()}` : ''}` : null,
+        params.end_date?.trim() ? `To ${params.end_date.trim()}${params.end_time?.trim() ? ` ${params.end_time.trim()}` : ''}` : null,
+    ].filter((value): value is string => value !== null);
+
+    return parts.length > 0 ? parts.join(' • ') : 'Legacy export with current report filters';
+};
+
+const registerDownload = (payload: { filename: string; action: string; fileType: string; params: Record<string, string> }) => {
+    const nextEntries = [
+        {
+            id: `${payload.filename}-${Date.now()}`,
+            reportFamily: activeFamilyLabel.value,
+            filename: payload.filename,
+            status: 'Complete' as const,
+            generatedAt: new Date().toISOString(),
+            fileType: payload.fileType,
+            filterSummary: compactFilterSummary(payload.params),
+        },
+        ...shelfEntries.value,
+    ].slice(0, 6);
+
+    if (Array.isArray(rememberedShelfEntries)) {
+        rememberedShelfEntries.splice(0, rememberedShelfEntries.length, ...nextEntries);
+
+        return;
+    }
+
+    rememberedShelfEntries.value = nextEntries;
+};
 </script>
 
 <template>
@@ -173,6 +231,7 @@ const previewMetrics = computed(() => [
                 :actions="props.filterPanel.actions"
                 :csrf-token="csrfToken"
                 @state-change="syncFilterValues"
+                @download-complete="registerDownload"
             />
 
             <div class="grid gap-6">
@@ -184,6 +243,14 @@ const previewMetrics = computed(() => [
                     :empty-title="props.previewSummary.emptyTitle"
                     :empty-description="props.previewSummary.emptyDescription"
                     :notes="props.previewSummary.notes"
+                />
+
+                <DownloadShelf
+                    :title="props.downloadShelf.title"
+                    :description="props.downloadShelf.description"
+                    :empty-title="props.downloadShelf.emptyTitle"
+                    :empty-description="props.downloadShelf.emptyDescription"
+                    :entries="shelfEntries"
                 />
 
                 <Card class="py-5">

@@ -731,6 +731,12 @@ final class ReportController extends Controller
             ],
             'filterPanel' => $this->reportFilterPanel($reportType),
             'previewSummary' => $this->reportPreviewSummary($reportType),
+            'downloadShelf' => [
+                'title' => 'Download shelf',
+                'description' => 'Track recent report exports generated in this browser session without changing backend report storage.',
+                'emptyTitle' => 'No downloads in this session yet',
+                'emptyDescription' => 'Completed report exports will appear here so analysts can confirm the latest filename and outcome.',
+            ],
         ]);
     }
 

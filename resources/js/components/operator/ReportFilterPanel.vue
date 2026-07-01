@@ -45,6 +45,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
     stateChange: [values: Record<string, string>];
+    downloadComplete: [payload: { filename: string; action: string; fileType: string; params: Record<string, string> }];
 }>();
 
 const allFields = computed(() => props.sections.flatMap((section) => section.fields));
@@ -122,6 +123,7 @@ watch(
                         :action="action.action"
                         :params="formState"
                         :tone="action.tone"
+                        @download-complete="emit('downloadComplete', $event)"
                     />
 
                     <form

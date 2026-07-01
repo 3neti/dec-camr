@@ -16,6 +16,9 @@ const props = withDefaults(
         tone: 'secondary',
     },
 );
+const emit = defineEmits<{
+    downloadComplete: [payload: { filename: string; action: string; fileType: string; params: Record<string, string> }];
+}>();
 
 const labelByState = {
     idle: 'Ready',
@@ -136,6 +139,12 @@ const download = async (): Promise<void> => {
 
         state.value = 'complete';
         detail.value = `Downloaded ${filename}.`;
+        emit('downloadComplete', {
+            filename,
+            action: props.action,
+            fileType: blob.type,
+            params: { ...props.params },
+        });
     } catch (error) {
         state.value = 'error';
         detail.value = error instanceof Error ? error.message : 'Legacy export request failed.';

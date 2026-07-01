@@ -910,3 +910,16 @@ test('site report page marks workbook downloads as export actions', function () 
             ->where('filterPanel.actions.2.kind', 'export')
         );
 });
+
+test('sap report page exposes download shelf metadata', function () {
+    $response = $this->withSession(['loginID' => $this->admin->id])->get('/sap_report');
+
+    $response
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('downloadShelf.title', 'Download shelf')
+            ->where('downloadShelf.emptyTitle', 'No downloads in this session yet')
+            ->where('downloadShelf.emptyDescription', 'Completed report exports will appear here so analysts can confirm the latest filename and outcome.')
+        );
+});
