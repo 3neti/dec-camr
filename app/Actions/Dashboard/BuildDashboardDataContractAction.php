@@ -20,6 +20,8 @@ class BuildDashboardDataContractAction
 
     private const REPORT_READY_WINDOW_HOURS = 24;
 
+    private const RECENT_TELEMETRY_LIMIT = 5;
+
     /**
      * @return array<string, mixed>
      */
@@ -38,6 +40,32 @@ class BuildDashboardDataContractAction
         $lastReceivedAt = MeterData::query()->max('datetime');
         $recentReadings = (clone $recentTelemetryBaseQuery)->count();
         $recentActiveMeters = (clone $recentTelemetryBaseQuery)->distinct()->count('meter_id');
+        $recentTelemetry = DB::table('meter_data')
+            ->leftJoin('meter_details', 'meter_data.meter_id', '=', 'meter_details.meter_id')
+            ->select([
+                'meter_data.meter_id',
+                'meter_data.datetime',
+                'meter_details.meter_name',
+                'meter_details.site_code',
+                'meter_details.location_idx',
+            ])
+            ->orderByDesc('meter_data.datetime')
+            ->limit(self::RECENT_TELEMETRY_LIMIT)
+            ->get()
+            ->map(function (object $row) use ($onlineCutoff, $offlineCutoff): array {
+                $receivedAt = CarbonImmutable::parse((string) $row->datetime);
+
+                return [
+                    'id' => sprintf('%s:%s', (string) $row->meter_id, $receivedAt->toIso8601String()),
+                    'meterId' => (string) $row->meter_id,
+                    'meterName' => $row->meter_name !== null ? (string) $row->meter_name : null,
+                    'siteCode' => $row->site_code !== null ? (string) $row->site_code : null,
+                    'locationId' => $row->location_idx !== null ? (string) $row->location_idx : null,
+                    'receivedAt' => $receivedAt->toIso8601String(),
+                    'status' => $this->healthState($receivedAt, $onlineCutoff, $offlineCutoff),
+                ];
+            })
+            ->all();
         $recentSitesWithTelemetry = DB::table('meter_data')
             ->join('meter_details', 'meter_data.meter_id', '=', 'meter_details.meter_id')
             ->where('meter_data.datetime', '>=', $reportCutoff->toDateTimeString())
@@ -72,6 +100,7 @@ class BuildDashboardDataContractAction
                 'lastReceivedAt' => is_string($lastReceivedAt) && $lastReceivedAt !== ''
                     ? CarbonImmutable::parse($lastReceivedAt)->toIso8601String()
                     : null,
+                'recentTelemetry' => $recentTelemetry,
             ],
             'pendingUpdateSummary' => [
                 'total' => Gateway::query()
@@ -156,5 +185,21 @@ class BuildDashboardDataContractAction
         }
 
         return 'empty';
+    }
+
+    private function healthState(
+        CarbonImmutable $receivedAt,
+        CarbonImmutable $onlineCutoff,
+        CarbonImmutable $offlineCutoff,
+    ): string {
+        if ($receivedAt->greaterThanOrEqualTo($onlineCutoff)) {
+            return 'online';
+        }
+
+        if ($receivedAt->greaterThanOrEqualTo($offlineCutoff)) {
+            return 'stale';
+        }
+
+        return 'offline';
     }
 }

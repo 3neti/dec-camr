@@ -15,11 +15,13 @@ import { user } from '@/actions/App/Http/Controllers/UserController';
 import AttentionList from '@/components/operator/AttentionList.vue';
 import KpiCard from '@/components/operator/KpiCard.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
+import RecentTelemetryList from '@/components/operator/RecentTelemetryList.vue';
 import StatusChip from '@/components/operator/StatusChip.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { site } from '@/routes';
 
 type ReportState = 'ready' | 'partial' | 'empty';
+type TelemetryStatus = 'online' | 'stale' | 'offline';
 
 type DashboardProps = {
     context: {
@@ -48,6 +50,15 @@ type DashboardProps = {
         recentReadings: number;
         activeMeters: number;
         lastReceivedAt: string | null;
+        recentTelemetry: Array<{
+            id: string;
+            meterId: string;
+            meterName: string | null;
+            siteCode: string | null;
+            locationId: string | null;
+            receivedAt: string;
+            status: TelemetryStatus;
+        }>;
     };
     pendingUpdateSummary: {
         total: number;
@@ -271,6 +282,13 @@ const attentionItems = computed<AttentionItem[]>(() => {
 
     return items;
 });
+
+const recentTelemetryItems = computed(() =>
+    props.telemetrySummary.recentTelemetry.map((item) => ({
+        ...item,
+        href: meter(),
+    })),
+);
 
 const quickActions = computed(() => {
     const role = props.context.user.role.toLowerCase();
@@ -578,6 +596,11 @@ defineOptions({
                         </div>
                     </CardContent>
                 </Card>
+
+                <RecentTelemetryList
+                    :items="recentTelemetryItems"
+                    description="Latest readings, freshness, and meter context without loading the full telemetry history."
+                />
 
                 <Card class="py-5">
                     <CardHeader class="px-5 pb-0">
