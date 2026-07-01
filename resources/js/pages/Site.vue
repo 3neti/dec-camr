@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+import EntityForm from '@/components/operator/EntityForm.vue';
+import EntityTable from '@/components/operator/EntityTable.vue';
+import OperatorPage from '@/components/operator/OperatorPage.vue';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type Site = {
     site_id: number;
@@ -26,89 +30,86 @@ const props = defineProps<{
 
 const page = usePage();
 const csrfToken = page.props.csrfToken as string;
+
+const formFields = [
+    {
+        id: 'building_code',
+        name: 'building_code',
+        label: 'Building Code',
+        placeholder: 'SITEA',
+    },
+    {
+        id: 'building_description',
+        name: 'building_description',
+        label: 'Building Description',
+        placeholder: 'Building Description',
+    },
+    {
+        id: 'division_id',
+        name: 'division_id',
+        label: 'Division ID',
+        placeholder: '1',
+    },
+    {
+        id: 'company_id',
+        name: 'company_id',
+        label: 'Company ID',
+        placeholder: '1',
+    },
+];
+
+const columns = [
+    {
+        key: 'building_code',
+        label: 'Building Code',
+        render: (value: unknown, row: Record<string, unknown>) =>
+            String((row.building_code as string | null) ?? (row.site_code as string | null) ?? value ?? '-'),
+    },
+    {
+        key: 'building_description',
+        label: 'Description',
+        render: (value: unknown) => String(value ?? '-'),
+    },
+    {
+        key: 'division_idx',
+        label: 'Division ID',
+    },
+    {
+        key: 'company_idx',
+        label: 'Company ID',
+    },
+];
 </script>
 
 <template>
-    <Head :title="title" />
-
-    <div class="space-y-6">
-        <h1 class="text-2xl font-semibold">{{ title }}</h1>
-
-        <form
-            class="flex flex-wrap gap-3"
-            method="POST"
+    <OperatorPage :title="title">
+        <EntityForm
+            title="Create site"
+            description="Legacy create contract: building code/description and owning division/company ids."
             action="/create_site_post"
-        >
-            <input type="hidden" name="_token" :value="csrfToken" />
+            :fields="formFields"
+            :csrf-token="csrfToken"
+            grid-class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            submit-wrapper-class="flex items-end sm:col-span-2 lg:col-span-4"
+        />
 
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Building Code</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="building_code"
-                    placeholder="SITEA"
-                />
-            </label>
+        <Card v-if="props.viewSite">
+            <CardHeader class="space-y-1">
+                <CardTitle>Viewing Site #{{ props.viewSite.site_id }}</CardTitle>
+                <CardDescription>Detailed single-site context from the legacy response.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p class="text-sm text-muted-foreground">Code: {{ props.viewSite.site_code || '—' }}</p>
+                <p class="text-sm text-muted-foreground">Description: {{ props.viewSite.building_description || '—' }}</p>
+            </CardContent>
+        </Card>
 
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Building Description</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="building_description"
-                    placeholder="Building Description"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Division ID</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="division_id"
-                    placeholder="1"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Company ID</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="company_id"
-                    placeholder="1"
-                />
-            </label>
-
-            <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white" type="submit">
-                Create
-            </button>
-        </form>
-
-        <div v-if="props.viewSite" class="rounded border p-4">
-            <h2 class="text-lg font-medium">Viewing Site #{{ props.viewSite.site_id }}</h2>
-            <p class="text-sm text-gray-700">Code: {{ props.viewSite.site_code || '—' }}</p>
-            <p class="text-sm text-gray-700">Description: {{ props.viewSite.building_description || '—' }}</p>
-        </div>
-
-        <table class="w-full border-collapse">
-            <thead>
-                <tr>
-                    <th class="border px-3 py-2 text-left">Building Code</th>
-                    <th class="border px-3 py-2 text-left">Description</th>
-                    <th class="border px-3 py-2 text-left">Division ID</th>
-                    <th class="border px-3 py-2 text-left">Company ID</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="site in props.sites" :key="site.site_id">
-                    <td class="border px-3 py-2">{{ site.building_code || site.site_code || '—' }}</td>
-                    <td class="border px-3 py-2">{{ site.building_description || '—' }}</td>
-                    <td class="border px-3 py-2">{{ site.division_idx }}</td>
-                    <td class="border px-3 py-2">{{ site.company_idx }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <EntityTable
+            title="Existing sites"
+            description="Current records in the system."
+            :columns="columns"
+            :rows="props.sites"
+            row-key="site_id"
+        />
+    </OperatorPage>
 </template>

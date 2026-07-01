@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
-import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -17,8 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { getOperatorShellNavigationSections } from '@/config/operatorShellNavigation';
 import type { OperatorShellNavSection } from '@/config/operatorShellNavigation';
-import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import { site } from '@/routes';
 
 const page = usePage();
 
@@ -32,19 +29,6 @@ const userType = computed(
 const operatorNavSections = computed(() => {
     return getOperatorShellNavigationSections(userType.value) as OperatorShellNavSection[];
 });
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
 </script>
 
 <template>
@@ -53,7 +37,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="site()">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
@@ -71,7 +55,6 @@ const footerNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

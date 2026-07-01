@@ -31,7 +31,7 @@ const sections: OperatorShellNavSection[] = [
         items: [
             {
                 title: 'Dashboard',
-                href: '/dashboard',
+                href: '/site',
                 icon: LayoutGrid,
                 quickAccess: true,
             },

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+import EntityForm from '@/components/operator/EntityForm.vue';
+import EntityTable from '@/components/operator/EntityTable.vue';
+import OperatorPage from '@/components/operator/OperatorPage.vue';
 
 type Building = {
     building_id: number;
@@ -23,69 +26,67 @@ const props = defineProps<{
 
 const page = usePage();
 const csrfToken = page.props.csrfToken as string;
+
+const formFields = [
+    {
+        id: 'building_site_id',
+        name: 'siteID',
+        label: 'Site ID',
+        placeholder: '1',
+    },
+    {
+        id: 'building_code',
+        name: 'building_code',
+        label: 'Building Code',
+        placeholder: 'SITEA',
+    },
+    {
+        id: 'building_description',
+        name: 'building_description',
+        label: 'Building Description',
+        placeholder: 'Accessible Building',
+    },
+];
+
+const columns = [
+    {
+        key: 'building_id',
+        label: 'Building ID',
+    },
+    {
+        key: 'site_idx',
+        label: 'Site ID',
+    },
+    {
+        key: 'building_code',
+        label: 'Building Code',
+        render: (value: unknown) => String(value ?? '-'),
+    },
+    {
+        key: 'building_description',
+        label: 'Description',
+        render: (value: unknown) => String(value ?? '-'),
+    },
+];
 </script>
 
 <template>
-    <Head :title="title" />
+    <OperatorPage :title="title">
+        <EntityForm
+            title="Create building"
+            description="Legacy create contract for a building entry."
+            action="/create_building_post"
+            :fields="formFields"
+            :csrf-token="csrfToken"
+            grid-class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        />
 
-    <div class="space-y-6">
-        <h1 class="text-2xl font-semibold">{{ title }}</h1>
-
-        <form class="flex flex-wrap gap-3" method="POST" action="/create_building_post">
-            <input type="hidden" name="_token" :value="csrfToken" />
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Site ID</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="siteID"
-                    placeholder="1"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Building Code</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="building_code"
-                    placeholder="SITEA"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Building Description</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="building_description"
-                    placeholder="Accessible Building"
-                />
-            </label>
-
-            <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white" type="submit">
-                Create
-            </button>
-        </form>
-
-        <table class="w-full border-collapse">
-            <thead>
-                <tr>
-                    <th class="border px-3 py-2 text-left">Building ID</th>
-                    <th class="border px-3 py-2 text-left">Site ID</th>
-                    <th class="border px-3 py-2 text-left">Building Code</th>
-                    <th class="border px-3 py-2 text-left">Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="building in props.buildings" :key="building.building_id">
-                    <td class="border px-3 py-2">{{ building.building_id }}</td>
-                    <td class="border px-3 py-2">{{ building.site_idx }}</td>
-                    <td class="border px-3 py-2">{{ building.building_code || '-' }}</td>
-                    <td class="border px-3 py-2">{{ building.building_description || '-' }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <EntityTable
+            title="Existing buildings"
+            description="Current records in the system."
+            :columns="columns"
+            :rows="props.buildings"
+            row-key="building_id"
+        />
+    </OperatorPage>
 </template>

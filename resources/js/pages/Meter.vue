@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+import EntityForm from '@/components/operator/EntityForm.vue';
+import EntityTable from '@/components/operator/EntityTable.vue';
+import OperatorPage from '@/components/operator/OperatorPage.vue';
 
 type Meter = {
     meter_id: number;
@@ -15,102 +18,134 @@ const props = defineProps<{
 
 const page = usePage();
 const csrfToken = page.props.csrfToken as string;
+
+const formFields = [
+    {
+        id: 'meter_name',
+        name: 'meter_name',
+        label: 'Meter Name',
+        placeholder: 'MTR-001',
+    },
+    {
+        id: 'meter_default_name',
+        name: 'meter_default_name',
+        label: 'Alternate Address',
+        placeholder: 'Alternate Name',
+    },
+    {
+        id: 'meter_model_id',
+        name: 'meter_model_id',
+        label: 'Configuration',
+        placeholder: '1',
+    },
+    {
+        id: 'rtu_sn_number_id',
+        name: 'rtu_sn_number_id',
+        label: 'Gateway ID',
+        placeholder: '1',
+    },
+    {
+        id: 'location_id',
+        name: 'location_id',
+        label: 'Location ID',
+        placeholder: '1',
+    },
+    {
+        id: 'site_id',
+        name: 'siteID',
+        hidden: true,
+        value: 1,
+    },
+    {
+        id: 'site_code',
+        name: 'site_code',
+        hidden: true,
+        value: 'SITEA',
+    },
+    {
+        id: 'meter_name_addressable',
+        name: 'meter_name_addressable',
+        hidden: true,
+        value: 1,
+    },
+    {
+        id: 'meter_multiplier',
+        name: 'meter_multiplier',
+        hidden: true,
+        value: 1,
+    },
+    {
+        id: 'meter_type',
+        name: 'meter_type',
+        hidden: true,
+        value: 'Power',
+    },
+    {
+        id: 'meter_brand',
+        name: 'meter_brand',
+        hidden: true,
+        value: 'Schneider',
+    },
+    {
+        id: 'meter_role',
+        name: 'meter_role',
+        hidden: true,
+        value: 'Client Meter',
+    },
+    {
+        id: 'meter_status',
+        name: 'meter_status',
+        hidden: true,
+        value: 'ACTIVE',
+    },
+    {
+        id: 'customer_name',
+        name: 'customer_name',
+        hidden: true,
+        value: '',
+    },
+    {
+        id: 'meter_remarks',
+        name: 'meter_remarks',
+        hidden: true,
+        value: '',
+    },
+];
+
+const columns = [
+    {
+        key: 'meter_name',
+        label: 'Name',
+    },
+    {
+        key: 'meter_default_name',
+        label: 'Alternate',
+    },
+    {
+        key: 'meter_status',
+        label: 'Status',
+    },
+];
 </script>
 
 <template>
-    <Head :title="title" />
-
-    <div class="space-y-6">
-        <h1 class="text-2xl font-semibold">{{ title }}</h1>
-
-        <form
-            class="flex flex-wrap gap-3"
-            method="POST"
+    <OperatorPage :title="title">
+        <EntityForm
+            title="Create meter"
+            description="Preserve legacy creation contract with clearer operator field layout."
             action="/create_meter_post"
-        >
-            <input type="hidden" name="_token" :value="csrfToken" />
+            :fields="formFields"
+            :csrf-token="csrfToken"
+            grid-class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            submit-wrapper-class="flex items-end sm:col-span-2 lg:col-span-3"
+        />
 
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Meter Name</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="meter_name"
-                    placeholder="MTR-001"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Alternate Address</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="meter_default_name"
-                    placeholder="Alternate Name"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Configuration</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="meter_model_id"
-                    placeholder="1"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Gateway ID</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="rtu_sn_number_id"
-                    placeholder="1"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Location ID</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="location_id"
-                    placeholder="1"
-                />
-            </label>
-
-            <input type="hidden" name="siteID" value="1" />
-            <input type="hidden" name="site_code" value="SITEA" />
-            <input type="hidden" name="meter_name_addressable" value="1" />
-            <input type="hidden" name="meter_multiplier" value="1" />
-            <input type="hidden" name="meter_type" value="Power" />
-            <input type="hidden" name="meter_brand" value="Schneider" />
-            <input type="hidden" name="meter_role" value="Client Meter" />
-            <input type="hidden" name="meter_status" value="ACTIVE" />
-            <input type="hidden" name="customer_name" value="" />
-            <input type="hidden" name="meter_remarks" value="" />
-
-            <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white" type="submit">
-                Create
-            </button>
-        </form>
-
-        <table class="w-full border-collapse">
-            <thead>
-                <tr>
-                    <th class="border px-3 py-2 text-left">Name</th>
-                    <th class="border px-3 py-2 text-left">Alternate</th>
-                    <th class="border px-3 py-2 text-left">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="meter in props.meters ?? []" :key="meter.meter_id">
-                    <td class="border px-3 py-2">{{ meter.meter_name }}</td>
-                    <td class="border px-3 py-2">{{ meter.meter_default_name }}</td>
-                    <td class="border px-3 py-2">{{ meter.meter_status }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <EntityTable
+            title="Existing meters"
+            description="Current records in the system."
+            :columns="columns"
+            :rows="props.meters ?? []"
+            row-key="meter_id"
+        />
+    </OperatorPage>
 </template>

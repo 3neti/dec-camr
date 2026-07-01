@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+import EntityForm from '@/components/operator/EntityForm.vue';
+import EntityTable from '@/components/operator/EntityTable.vue';
+import OperatorPage from '@/components/operator/OperatorPage.vue';
 
 type Gateway = {
     rtu_id: number;
@@ -16,78 +19,79 @@ const props = defineProps<{
 
 const page = usePage();
 const csrfToken = page.props.csrfToken as string;
+
+const formFields = [
+    {
+        id: 'gateway_sn',
+        name: 'gateway_sn',
+        label: 'Gateway Serial Number',
+        placeholder: 'GW-001',
+    },
+    {
+        id: 'gateway_mac',
+        name: 'gateway_mac',
+        label: 'MAC Address',
+        placeholder: 'AA:BB:CC:DD:EE:FF',
+    },
+    {
+        id: 'gateway_ip',
+        name: 'gateway_ip',
+        label: 'IP Address',
+        placeholder: '10.0.0.1',
+    },
+    {
+        id: 'site_id',
+        name: 'siteID',
+        label: 'Site ID',
+        hidden: true,
+        value: 1,
+    },
+];
+
+const columns = [
+    {
+        key: 'gateway_sn',
+        label: 'Serial',
+    },
+    {
+        key: 'gateway_mac',
+        label: 'MAC',
+    },
+    {
+        key: 'gateway_ip',
+        label: 'IP',
+    },
+    {
+        key: 'site_code',
+        label: 'Site Code',
+        render: (value: unknown) => String(value ?? '—'),
+    },
+];
 </script>
 
 <template>
-    <Head :title="title" />
-
-    <div class="space-y-6">
-        <h1 class="text-2xl font-semibold">{{ title }}</h1>
-
-        <form
-            class="flex flex-wrap gap-3"
-            method="POST"
+    <OperatorPage :title="title">
+        <EntityForm
+            title="Create gateway"
+            description="Keep legacy field names and defaults while modernizing layout."
             action="/create_gateway_post"
-        >
-            <input type="hidden" name="_token" :value="csrfToken" />
+            :fields="[
+                ...formFields,
+                { id: 'site_code', name: 'site_code', hidden: true, value: 'SITEA' },
+                { id: 'connection_type', name: 'connection_type', hidden: true, value: 'LAN' },
+                { id: 'location_id', name: 'location_id', hidden: true, value: 0 },
+            ]"
+            :csrf-token="csrfToken"
+            grid-class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            submit-wrapper-class="flex items-end sm:col-span-2 lg:col-span-4"
+        />
 
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Gateway Serial Number</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="gateway_sn"
-                    placeholder="GW-001"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">MAC Address</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="gateway_mac"
-                    placeholder="AA:BB:CC:DD:EE:FF"
-                />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">IP Address</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="gateway_ip"
-                    placeholder="10.0.0.1"
-                />
-            </label>
-
-            <input type="hidden" name="siteID" value="1" />
-            <input type="hidden" name="site_code" value="SITEA" />
-            <input type="hidden" name="connection_type" value="LAN" />
-            <input type="hidden" name="location_id" value="0" />
-
-            <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white" type="submit">
-                Create
-            </button>
-        </form>
-
-        <table class="w-full border-collapse">
-            <thead>
-                <tr>
-                    <th class="border px-3 py-2 text-left">Serial</th>
-                    <th class="border px-3 py-2 text-left">MAC</th>
-                    <th class="border px-3 py-2 text-left">IP</th>
-                    <th class="border px-3 py-2 text-left">Site Code</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="gateway in props.gateways" :key="gateway.rtu_id">
-                    <td class="border px-3 py-2">{{ gateway.gateway_sn }}</td>
-                    <td class="border px-3 py-2">{{ gateway.gateway_mac }}</td>
-                    <td class="border px-3 py-2">{{ gateway.gateway_ip }}</td>
-                    <td class="border px-3 py-2">{{ gateway.site_code || '—' }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <EntityTable
+            title="Existing gateways"
+            description="Current records in the system."
+            :columns="columns"
+            :rows="props.gateways"
+            row-key="rtu_id"
+        />
+    </OperatorPage>
 </template>

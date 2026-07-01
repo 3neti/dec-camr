@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+import EntityForm from '@/components/operator/EntityForm.vue';
+import EntityTable from '@/components/operator/EntityTable.vue';
+import OperatorPage from '@/components/operator/OperatorPage.vue';
 
 type Company = {
     company_id: number;
@@ -14,49 +17,46 @@ const props = defineProps<{
 
 const page = usePage();
 const csrfToken = page.props.csrfToken as string;
+
+const formFields = [
+    {
+        id: 'company_name',
+        name: 'company_name',
+        label: 'Company Name',
+        placeholder: 'Company Name',
+    },
+];
+
+const columns = [
+    {
+        key: 'company_code',
+        label: 'Code',
+        render: (value: unknown) => String(value ?? '-'),
+    },
+    {
+        key: 'company_name',
+        label: 'Name',
+    },
+];
 </script>
 
 <template>
-    <Head :title="title" />
-
-    <div class="space-y-6">
-        <h1 class="text-2xl font-semibold">{{ title }}</h1>
-
-        <form
-            class="flex flex-wrap gap-3"
-            method="POST"
+    <OperatorPage :title="title">
+        <EntityForm
+            title="Create company"
+            description="Add a new company record using the legacy contract fields."
             action="/create_company_post"
-        >
-            <input type="hidden" name="_token" :value="csrfToken" />
+            :fields="formFields"
+            :csrf-token="csrfToken"
+            grid-class="grid gap-4 sm:grid-cols-2"
+        />
 
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">Company Name</span>
-                <input
-                    class="h-9 rounded-md border px-3"
-                    type="text"
-                    name="company_name"
-                    placeholder="Company Name"
-                />
-            </label>
-
-            <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white" type="submit">
-                Create
-            </button>
-        </form>
-
-        <table class="w-full border-collapse">
-            <thead>
-                <tr>
-                    <th class="border px-3 py-2 text-left">Code</th>
-                    <th class="border px-3 py-2 text-left">Name</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="company in props.companies" :key="company.company_id">
-                    <td class="border px-3 py-2">{{ company.company_code || '-' }}</td>
-                    <td class="border px-3 py-2">{{ company.company_name }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <EntityTable
+            title="Existing companies"
+            description="Current records in the system."
+            :columns="columns"
+            :rows="props.companies"
+            row-key="company_id"
+        />
+    </OperatorPage>
 </template>
