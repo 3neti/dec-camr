@@ -65,31 +65,55 @@ Artisan::command('camr:seed-profile {--profile=demo}', function (): int {
     return self::SUCCESS;
 })->purpose('Seed a deterministic CAMR UI foundation profile');
 
-Artisan::command('camr:simulate {--profile=demo} {--duration=10m} {--speed=real} {--scenario=normal} {--dry-run} {--allow-production}', function (): int {
+Artisan::command('camr:simulate {--profile=demo} {--duration=10m} {--speed=real} {--scenario=normal} {--deterministic=1} {--dry-run} {--allow-production}', function (): int {
     if (app()->environment('production') && ! (bool) $this->option('allow-production')) {
         $this->error('camr:simulate is disabled in production. Use --allow-production if this is intentional.');
 
         return self::FAILURE;
     }
 
-    $rawScenario = (string) $this->option('scenario');
-    $normalizedScenario = strtolower(trim($rawScenario));
+    $supportedProfiles = ['minimal', 'demo', 'heavy'];
     $supportedScenarios = ['normal', 'offline-recovery', 'report-window'];
-    $scenario = in_array($normalizedScenario, $supportedScenarios, true) ? $normalizedScenario : 'normal';
-    if ($normalizedScenario !== $scenario) {
-        $this->warn(sprintf('Unknown scenario "%s" received; using "%s".', $normalizedScenario, $scenario));
+    $supportedSpeeds = ['slow', 'real', 'fast'];
+
+    $profile = strtolower(trim((string) $this->option('profile')));
+    if (! in_array($profile, $supportedProfiles, true)) {
+        $this->error(sprintf('Unsupported profile: %s', $profile));
+        $this->info(sprintf('Supported profiles: %s', implode(', ', $supportedProfiles)));
+
+        return self::FAILURE;
     }
 
-    $profile = strtolower((string) $this->option('profile'));
+    $rawScenario = (string) $this->option('scenario');
+    $normalizedScenario = strtolower(trim($rawScenario));
+    if (! in_array($normalizedScenario, $supportedScenarios, true)) {
+        $this->error(sprintf('Unsupported scenario: %s', $rawScenario));
+        $this->info(sprintf('Supported scenarios: %s', implode(', ', $supportedScenarios)));
+
+        return self::FAILURE;
+    }
+
+    $scenario = $normalizedScenario;
     $duration = (string) $this->option('duration');
+
     $rawSpeed = (string) $this->option('speed');
-    $normalizedSpeed = strtolower(trim($rawSpeed));
-    $supportedSpeeds = ['slow', 'real', 'fast'];
-    $speed = in_array($normalizedSpeed, $supportedSpeeds, true) ? $normalizedSpeed : 'real';
-    if ($rawSpeed !== $speed) {
-        $this->warn(sprintf('Unknown speed "%s" received; using "%s".', $rawSpeed, $speed));
+    $speed = strtolower(trim($rawSpeed));
+    if (! in_array($speed, $supportedSpeeds, true)) {
+        $this->error(sprintf('Unsupported speed: %s', $rawSpeed));
+        $this->info(sprintf('Supported speeds: %s', implode(', ', $supportedSpeeds)));
+
+        return self::FAILURE;
     }
     $dryRun = (bool) $this->option('dry-run');
+    $deterministic = (string) $this->option('deterministic');
+    if (! in_array(strtolower($deterministic), ['0', '1', 'true', 'false'], true)) {
+        $this->error(sprintf('Unsupported --deterministic value: %s', $deterministic));
+        $this->info('Supported values: 0, 1, true, false');
+
+        return self::FAILURE;
+    }
+
+    $deterministicMode = in_array(strtolower($deterministic), ['1', 'true'], true);
     $simulator = app(SimulateTelemetryAction::class);
 
     $summary = $simulator->simulate(
@@ -97,12 +121,14 @@ Artisan::command('camr:simulate {--profile=demo} {--duration=10m} {--speed=real}
         speed: $speed,
         scenario: $scenario,
         profile: $profile,
-        dryRun: $dryRun
+        dryRun: $dryRun,
+        deterministic: $deterministicMode
     );
 
     $this->info(sprintf('Simulation scenario: %s', $scenario));
     $this->info(sprintf('Profile: %s', $profile));
     $this->info(sprintf('Speed: %s', $speed));
+    $this->info(sprintf('Deterministic mode: %s', $deterministicMode ? 'enabled' : 'disabled'));
     $this->info(sprintf('Dry run: %s', $dryRun ? 'yes' : 'no'));
     $this->info(sprintf('Rows inserted: %d', $summary['rows_inserted']));
     $this->info(sprintf('Meters covered: %d', $summary['meters_covered']));

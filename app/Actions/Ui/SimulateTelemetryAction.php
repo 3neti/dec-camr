@@ -10,6 +10,7 @@ use App\Models\MeterData;
 use App\Models\Site;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 final class SimulateTelemetryAction
 {
@@ -18,6 +19,12 @@ final class SimulateTelemetryAction
     private const PROFILE_DEMO = 'demo';
 
     private const PROFILE_HEAVY = 'heavy';
+
+    private const SUPPORTED_PROFILES = [
+        self::PROFILE_MINIMAL,
+        self::PROFILE_DEMO,
+        self::PROFILE_HEAVY,
+    ];
 
     /**
      * @var array<int, string>
@@ -43,10 +50,11 @@ final class SimulateTelemetryAction
         string $scenario = 'normal',
         string $profile = 'demo',
         bool $dryRun = false,
+        bool $deterministic = true,
     ): array {
-        $scenario = $this->normalizeScenario($scenario);
-        $profile = $this->normalizeProfile($profile);
-        $speed = $this->normalizeSpeed($speed);
+        $scenario = $this->validateScenario($scenario);
+        $profile = $this->validateProfile($profile);
+        $speed = $this->validateSpeed($speed);
         $durationMinutes = max(5, $this->parseDurationMinutes($durationInput));
         $stepMinutes = self::SPEED_TO_MINUTES[$speed];
         $steps = (int) max(1, (int) floor($durationMinutes / max(1, $stepMinutes)));
@@ -74,7 +82,10 @@ final class SimulateTelemetryAction
         $updatedGatewayIds = [];
         $updatedSiteIds = [];
 
-        $startTime = CarbonImmutable::now()->subMinutes($durationMinutes)->startOfMinute();
+        $timeAnchor = $deterministic
+            ? CarbonImmutable::now()->startOfMinute()
+            : CarbonImmutable::now();
+        $startTime = $timeAnchor->subMinutes($durationMinutes)->startOfMinute();
         $midpointStep = (int) max(1, intdiv($steps, 2));
         $endTime = $startTime;
 
@@ -264,27 +275,37 @@ final class SimulateTelemetryAction
         }
     }
 
-    private function normalizeProfile(string $profile): string
+    private function validateProfile(string $profile): string
     {
-        return match (strtolower(trim($profile))) {
-            self::PROFILE_MINIMAL => self::PROFILE_MINIMAL,
-            self::PROFILE_HEAVY => self::PROFILE_HEAVY,
-            default => self::PROFILE_DEMO,
-        };
+        $normalized = strtolower(trim($profile));
+
+        if (! in_array($normalized, self::SUPPORTED_PROFILES, true)) {
+            throw new InvalidArgumentException(sprintf('Unsupported profile: %s', $profile));
+        }
+
+        return $normalized;
     }
 
-    private function normalizeScenario(string $scenario): string
+    private function validateScenario(string $scenario): string
     {
         $normalized = strtolower(trim($scenario));
 
-        return in_array($normalized, self::SUPPORTED_SCENARIOS, true) ? $normalized : 'normal';
+        if (! in_array($normalized, self::SUPPORTED_SCENARIOS, true)) {
+            throw new InvalidArgumentException(sprintf('Unsupported scenario: %s', $scenario));
+        }
+
+        return $normalized;
     }
 
-    private function normalizeSpeed(string $speed): string
+    private function validateSpeed(string $speed): string
     {
         $normalized = strtolower(trim($speed));
 
-        return array_key_exists($normalized, self::SPEED_TO_MINUTES) ? $normalized : 'real';
+        if (! array_key_exists($normalized, self::SPEED_TO_MINUTES)) {
+            throw new InvalidArgumentException(sprintf('Unsupported speed: %s', $speed));
+        }
+
+        return $normalized;
     }
 
     private function seedReportWindowHints(CarbonImmutable $timestamp, array $siteIds): void

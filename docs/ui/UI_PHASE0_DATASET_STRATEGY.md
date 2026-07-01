@@ -146,6 +146,7 @@ Use case:
 
 - `php artisan camr:seed-profile --profile=minimal|demo|heavy`
 - The command is deterministic and idempotent for repeated runs.
+- The command fails fast if an unsupported profile is passed; accepted values are `minimal`, `demo`, and `heavy`.
 
 ### Operator-Ready Baseline
 
@@ -195,6 +196,7 @@ Seeded rows establish structure. Phase 0.25 adds a stateful layer that mutates p
 - `php artisan camr:simulate --profile=heavy --duration=1h --speed=fast`
 - `php artisan camr:simulate --scenario=offline-recovery`
 - `php artisan camr:simulate --scenario=report-window`
+- `camr:simulate` validates `--profile`, `--speed`, and `--scenario` and rejects unknown values with explicit guidance.
 
 ## Migration-Ready Acceptance Criteria
 

@@ -35,6 +35,23 @@ Implementation now uses the following command shape:
 
 Production guard is enforced by default in the command implementation; add `--allow-production` only for approved local/manual validation.
 
+### Validation contract (Phase 0)
+
+- `--profile` must be one of `minimal`, `demo`, or `heavy`.
+- `--speed` must be one of `slow`, `real`, `fast`.
+- `--scenario` must be one of `normal`, `offline-recovery`, `report-window`.
+- Invalid values fail fast with an explicit supported-values message.
+
+### Deterministic mode
+
+- Deterministic mode is on by default (`--deterministic=1` or `--deterministic=true`).
+- Deterministic output is produced by:
+  - fixed profile scopes,
+  - ordered meter/gateway selection,
+  - deterministic scenario transition rules,
+  - controlled timestamp progression based on command execution window.
+- Set `--deterministic=0` only for non-reproducible local experimentation; this mode is expected to behave differently and is not used by the standard phase 0 acceptance path.
+
 ## Simulation Profiles
 
 ### Demo Profile Simulation
