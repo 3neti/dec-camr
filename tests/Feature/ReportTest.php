@@ -817,3 +817,45 @@ test('site report page exposes legacy report family selector metadata', function
             ->where('reportFamilies.6.href', '/site_report')
         );
 });
+
+test('raw report page exposes legacy filter panel contract', function () {
+    $response = $this->withSession(['loginID' => $this->admin->id])->get('/raw_report');
+
+    $response
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('reportType', 'raw')
+            ->where('filterPanel.title', 'Report filters')
+            ->where('filterPanel.sections.0.title', 'Scope')
+            ->where('filterPanel.sections.0.fields.0.name', 'site_id')
+            ->where('filterPanel.sections.0.fields.1.name', 'meter_id')
+            ->where('filterPanel.sections.1.title', 'Date range')
+            ->where('filterPanel.sections.1.fields.0.name', 'start_date')
+            ->where('filterPanel.sections.1.fields.1.name', 'start_time')
+            ->where('filterPanel.sections.1.fields.2.name', 'end_date')
+            ->where('filterPanel.sections.1.fields.3.name', 'end_time')
+            ->where('filterPanel.actions.0.method', 'post')
+            ->where('filterPanel.actions.0.action', '/generate_raw_report')
+            ->where('filterPanel.actions.1.method', 'get')
+            ->where('filterPanel.actions.1.action', '/generate_raw_report_excel')
+        );
+});
+
+test('consumption report page exposes hourly daily and export actions on the filter panel', function () {
+    $response = $this->withSession(['loginID' => $this->admin->id])->get('/consumption_report');
+
+    $response
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('reportType', 'consumption')
+            ->has('filterPanel.actions', 3)
+            ->where('filterPanel.actions.0.label', 'Generate Consumption Report (Hourly)')
+            ->where('filterPanel.actions.0.action', '/generate_consumption_report/hourly')
+            ->where('filterPanel.actions.1.label', 'Generate Consumption Report (Daily)')
+            ->where('filterPanel.actions.1.action', '/generate_consumption_report/daily')
+            ->where('filterPanel.actions.2.label', 'Download Consumption Export')
+            ->where('filterPanel.actions.2.action', '/download_consumption_report')
+        );
+});

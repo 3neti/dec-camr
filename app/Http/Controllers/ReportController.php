@@ -729,7 +729,317 @@ final class ReportController extends Controller
                     'active' => false,
                 ],
             ],
+            'filterPanel' => $this->reportFilterPanel($reportType),
         ]);
+    }
+
+    /**
+     * @return array{
+     *     title: string,
+     *     description: string,
+     *     sections: array<int, array{
+     *         id: string,
+     *         title: string,
+     *         description: string,
+     *         fields: array<int, array{
+     *             id: string,
+     *             name: string,
+     *             label: string,
+     *             type: string,
+     *             placeholder?: string
+     *         }>
+     *     }>,
+     *     actions: array<int, array{
+     *         id: string,
+     *         label: string,
+     *         method: string,
+     *         action: string,
+     *         tone: string
+     *     }>
+     * }
+     */
+    private function reportFilterPanel(string $reportType): array
+    {
+        $dateRangeSection = [
+            'id' => 'date-range',
+            'title' => 'Date range',
+            'description' => 'Preserve the legacy report date boundaries and submit explicit start and end values.',
+            'fields' => [
+                [
+                    'id' => 'start_date',
+                    'name' => 'start_date',
+                    'label' => 'Start Date',
+                    'type' => 'date',
+                ],
+                [
+                    'id' => 'start_time',
+                    'name' => 'start_time',
+                    'label' => 'Start Time',
+                    'type' => 'time',
+                    'placeholder' => '00:00',
+                ],
+                [
+                    'id' => 'end_date',
+                    'name' => 'end_date',
+                    'label' => 'End Date',
+                    'type' => 'date',
+                ],
+                [
+                    'id' => 'end_time',
+                    'name' => 'end_time',
+                    'label' => 'End Time',
+                    'type' => 'time',
+                    'placeholder' => '23:59',
+                ],
+            ],
+        ];
+
+        return match ($reportType) {
+            'sap' => [
+                'title' => 'Report filters',
+                'description' => 'Use the legacy SAP report fields and routes without changing request semantics.',
+                'sections' => [
+                    [
+                        'id' => 'scope',
+                        'title' => 'Scope',
+                        'description' => 'Legacy SAP reporting still keys scope through the authorized site/building identifier.',
+                        'fields' => [
+                            [
+                                'id' => 'site_id',
+                                'name' => 'site_id',
+                                'label' => 'Building / Site ID',
+                                'type' => 'number',
+                                'placeholder' => 'Enter the authorized site ID',
+                            ],
+                        ],
+                    ],
+                    [
+                        'id' => 'date-range',
+                        'title' => $dateRangeSection['title'],
+                        'description' => 'SAP exports use date-only range values on the legacy route surface.',
+                        'fields' => [
+                            [
+                                'id' => 'start_date',
+                                'name' => 'start_date',
+                                'label' => 'Start Date',
+                                'type' => 'date',
+                            ],
+                            [
+                                'id' => 'end_date',
+                                'name' => 'end_date',
+                                'label' => 'End Date',
+                                'type' => 'date',
+                            ],
+                        ],
+                    ],
+                ],
+                'actions' => [
+                    [
+                        'id' => 'generate-sap-report',
+                        'label' => 'Generate SAP Report',
+                        'method' => 'post',
+                        'action' => '/generate_sap_report',
+                        'tone' => 'primary',
+                    ],
+                    [
+                        'id' => 'download-sap-excel',
+                        'label' => 'Download SAP Excel',
+                        'method' => 'get',
+                        'action' => '/generate_sap_report_excel',
+                        'tone' => 'secondary',
+                    ],
+                ],
+            ],
+            'raw' => [
+                'title' => 'Report filters',
+                'description' => 'Raw Data keeps the legacy meter, date, and time field names so backend characterization remains intact.',
+                'sections' => [
+                    [
+                        'id' => 'scope',
+                        'title' => 'Scope',
+                        'description' => 'Choose the same site and meter identifiers expected by the legacy raw-data routes.',
+                        'fields' => [
+                            [
+                                'id' => 'site_id',
+                                'name' => 'site_id',
+                                'label' => 'Building / Site ID',
+                                'type' => 'number',
+                                'placeholder' => 'Enter the authorized site ID',
+                            ],
+                            [
+                                'id' => 'meter_id',
+                                'name' => 'meter_id',
+                                'label' => 'Meter ID',
+                                'type' => 'text',
+                                'placeholder' => 'Enter the legacy meter identifier',
+                            ],
+                        ],
+                    ],
+                    $dateRangeSection,
+                ],
+                'actions' => [
+                    [
+                        'id' => 'generate-raw-report',
+                        'label' => 'Generate RAW Report',
+                        'method' => 'post',
+                        'action' => '/generate_raw_report',
+                        'tone' => 'primary',
+                    ],
+                    [
+                        'id' => 'download-raw-excel',
+                        'label' => 'Download RAW Excel',
+                        'method' => 'get',
+                        'action' => '/generate_raw_report_excel',
+                        'tone' => 'secondary',
+                    ],
+                ],
+            ],
+            'site' => [
+                'title' => 'Report filters',
+                'description' => 'Building workflows preserve the existing site-level route contract while clarifying the available exports.',
+                'sections' => [
+                    [
+                        'id' => 'scope',
+                        'title' => 'Scope',
+                        'description' => 'Building and Site As-Built workflows use the authorized site/building identifier.',
+                        'fields' => [
+                            [
+                                'id' => 'site_id',
+                                'name' => 'site_id',
+                                'label' => 'Building / Site ID',
+                                'type' => 'number',
+                                'placeholder' => 'Enter the authorized site ID',
+                            ],
+                        ],
+                    ],
+                ],
+                'actions' => [
+                    [
+                        'id' => 'generate-site-report',
+                        'label' => 'Generate Site Report',
+                        'method' => 'post',
+                        'action' => '/generate_site_report',
+                        'tone' => 'primary',
+                    ],
+                    [
+                        'id' => 'download-site-excel',
+                        'label' => 'Download Site Excel',
+                        'method' => 'get',
+                        'action' => '/generate_site_report_excel',
+                        'tone' => 'secondary',
+                    ],
+                    [
+                        'id' => 'download-site-as-built',
+                        'label' => 'Download Site-As-Built Excel',
+                        'method' => 'get',
+                        'action' => '/generate_site_as_built_excel',
+                        'tone' => 'secondary',
+                    ],
+                ],
+            ],
+            'consumption' => [
+                'title' => 'Report filters',
+                'description' => 'KWh Consumption preserves the same meter, range, and interval route variants already proven by the report tests.',
+                'sections' => [
+                    [
+                        'id' => 'scope',
+                        'title' => 'Scope',
+                        'description' => 'Consumption routes require the same authorized site and meter identifiers as the legacy workflow.',
+                        'fields' => [
+                            [
+                                'id' => 'site_id',
+                                'name' => 'site_id',
+                                'label' => 'Building / Site ID',
+                                'type' => 'number',
+                                'placeholder' => 'Enter the authorized site ID',
+                            ],
+                            [
+                                'id' => 'meter_id',
+                                'name' => 'meter_id',
+                                'label' => 'Meter ID',
+                                'type' => 'text',
+                                'placeholder' => 'Enter the legacy meter identifier',
+                            ],
+                        ],
+                    ],
+                    $dateRangeSection,
+                ],
+                'actions' => [
+                    [
+                        'id' => 'generate-consumption-hourly',
+                        'label' => 'Generate Consumption Report (Hourly)',
+                        'method' => 'post',
+                        'action' => '/generate_consumption_report/hourly',
+                        'tone' => 'primary',
+                    ],
+                    [
+                        'id' => 'generate-consumption-daily',
+                        'label' => 'Generate Consumption Report (Daily)',
+                        'method' => 'post',
+                        'action' => '/generate_consumption_report/daily',
+                        'tone' => 'secondary',
+                    ],
+                    [
+                        'id' => 'download-consumption-export',
+                        'label' => 'Download Consumption Export',
+                        'method' => 'get',
+                        'action' => '/download_consumption_report',
+                        'tone' => 'secondary',
+                    ],
+                ],
+            ],
+            'demand' => [
+                'title' => 'Report filters',
+                'description' => 'KW Demand keeps the same required scope and date/time fields while exposing the legacy hourly and 15-minute variants.',
+                'sections' => [
+                    [
+                        'id' => 'scope',
+                        'title' => 'Scope',
+                        'description' => 'Demand routes require the same authorized site and meter identifiers as the characterized backend endpoints.',
+                        'fields' => [
+                            [
+                                'id' => 'site_id',
+                                'name' => 'site_id',
+                                'label' => 'Building / Site ID',
+                                'type' => 'number',
+                                'placeholder' => 'Enter the authorized site ID',
+                            ],
+                            [
+                                'id' => 'meter_id',
+                                'name' => 'meter_id',
+                                'label' => 'Meter ID',
+                                'type' => 'text',
+                                'placeholder' => 'Enter the legacy meter identifier',
+                            ],
+                        ],
+                    ],
+                    $dateRangeSection,
+                ],
+                'actions' => [
+                    [
+                        'id' => 'generate-demand-hourly',
+                        'label' => 'Generate Demand Report (Hourly)',
+                        'method' => 'post',
+                        'action' => '/generate_demand_report/hourly',
+                        'tone' => 'primary',
+                    ],
+                    [
+                        'id' => 'generate-demand-fifteen',
+                        'label' => 'Generate Demand Report (15-min)',
+                        'method' => 'post',
+                        'action' => '/generate_demand_report/fifteen',
+                        'tone' => 'secondary',
+                    ],
+                    [
+                        'id' => 'download-demand-export',
+                        'label' => 'Download Demand Export',
+                        'method' => 'get',
+                        'action' => '/download_demand_report',
+                        'tone' => 'secondary',
+                    ],
+                ],
+            ],
+        };
     }
 
     private function legacyUser(): User
