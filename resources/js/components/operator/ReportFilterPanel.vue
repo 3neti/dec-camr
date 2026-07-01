@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
+import ExportButton from '@/components/operator/ExportButton.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,7 @@ type FilterAction = {
     label: string;
     method: 'get' | 'post';
     action: string;
+    kind: 'submit' | 'export';
     tone?: 'primary' | 'secondary';
 };
 
@@ -113,25 +115,34 @@ watch(
             </section>
 
             <div class="flex flex-wrap gap-3">
-                <form
-                    v-for="action in props.actions"
-                    :key="action.id"
-                    :action="action.action"
-                    :method="action.method === 'get' ? 'GET' : 'POST'"
-                    class="inline"
-                >
-                    <input v-if="action.method === 'post' && props.csrfToken" type="hidden" name="_token" :value="props.csrfToken" />
-                    <input
-                        v-for="field in allFields"
-                        :key="`${action.id}-${field.name}`"
-                        type="hidden"
-                        :name="field.name"
-                        :value="formState[field.name] ?? ''"
+                <template v-for="action in props.actions" :key="action.id">
+                    <ExportButton
+                        v-if="action.kind === 'export'"
+                        :label="action.label"
+                        :action="action.action"
+                        :params="formState"
+                        :tone="action.tone"
                     />
-                    <button :class="buttonClass(action.tone)" type="submit">
-                        {{ action.label }}
-                    </button>
-                </form>
+
+                    <form
+                        v-else
+                        :action="action.action"
+                        :method="action.method === 'get' ? 'GET' : 'POST'"
+                        class="inline"
+                    >
+                        <input v-if="action.method === 'post' && props.csrfToken" type="hidden" name="_token" :value="props.csrfToken" />
+                        <input
+                            v-for="field in allFields"
+                            :key="`${action.id}-${field.name}`"
+                            type="hidden"
+                            :name="field.name"
+                            :value="formState[field.name] ?? ''"
+                        />
+                        <button :class="buttonClass(action.tone)" type="submit">
+                            {{ action.label }}
+                        </button>
+                    </form>
+                </template>
             </div>
         </CardContent>
     </Card>

@@ -44,6 +44,7 @@ type FilterAction = {
     label: string;
     method: 'get' | 'post';
     action: string;
+    kind: 'submit' | 'export';
     tone?: 'primary' | 'secondary';
 };
 

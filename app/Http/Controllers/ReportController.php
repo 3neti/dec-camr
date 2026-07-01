@@ -755,6 +755,7 @@ final class ReportController extends Controller
      *         label: string,
      *         method: string,
      *         action: string,
+     *         kind: string,
      *         tone: string
      *     }>
      * }
@@ -840,6 +841,7 @@ final class ReportController extends Controller
                         'label' => 'Generate SAP Report',
                         'method' => 'post',
                         'action' => '/generate_sap_report',
+                        'kind' => 'submit',
                         'tone' => 'primary',
                     ],
                     [
@@ -847,6 +849,7 @@ final class ReportController extends Controller
                         'label' => 'Download SAP Excel',
                         'method' => 'get',
                         'action' => '/generate_sap_report_excel',
+                        'kind' => 'export',
                         'tone' => 'secondary',
                     ],
                 ],
@@ -884,6 +887,7 @@ final class ReportController extends Controller
                         'label' => 'Generate RAW Report',
                         'method' => 'post',
                         'action' => '/generate_raw_report',
+                        'kind' => 'submit',
                         'tone' => 'primary',
                     ],
                     [
@@ -891,6 +895,7 @@ final class ReportController extends Controller
                         'label' => 'Download RAW Excel',
                         'method' => 'get',
                         'action' => '/generate_raw_report_excel',
+                        'kind' => 'export',
                         'tone' => 'secondary',
                     ],
                 ],
@@ -920,6 +925,7 @@ final class ReportController extends Controller
                         'label' => 'Generate Site Report',
                         'method' => 'post',
                         'action' => '/generate_site_report',
+                        'kind' => 'submit',
                         'tone' => 'primary',
                     ],
                     [
@@ -927,6 +933,7 @@ final class ReportController extends Controller
                         'label' => 'Download Site Excel',
                         'method' => 'get',
                         'action' => '/generate_site_report_excel',
+                        'kind' => 'export',
                         'tone' => 'secondary',
                     ],
                     [
@@ -934,6 +941,7 @@ final class ReportController extends Controller
                         'label' => 'Download Site-As-Built Excel',
                         'method' => 'get',
                         'action' => '/generate_site_as_built_excel',
+                        'kind' => 'export',
                         'tone' => 'secondary',
                     ],
                 ],
@@ -971,6 +979,7 @@ final class ReportController extends Controller
                         'label' => 'Generate Consumption Report (Hourly)',
                         'method' => 'post',
                         'action' => '/generate_consumption_report/hourly',
+                        'kind' => 'submit',
                         'tone' => 'primary',
                     ],
                     [
@@ -978,6 +987,7 @@ final class ReportController extends Controller
                         'label' => 'Generate Consumption Report (Daily)',
                         'method' => 'post',
                         'action' => '/generate_consumption_report/daily',
+                        'kind' => 'submit',
                         'tone' => 'secondary',
                     ],
                     [
@@ -985,6 +995,7 @@ final class ReportController extends Controller
                         'label' => 'Download Consumption Export',
                         'method' => 'get',
                         'action' => '/download_consumption_report',
+                        'kind' => 'export',
                         'tone' => 'secondary',
                     ],
                 ],
@@ -1022,6 +1033,7 @@ final class ReportController extends Controller
                         'label' => 'Generate Demand Report (Hourly)',
                         'method' => 'post',
                         'action' => '/generate_demand_report/hourly',
+                        'kind' => 'submit',
                         'tone' => 'primary',
                     ],
                     [
@@ -1029,6 +1041,7 @@ final class ReportController extends Controller
                         'label' => 'Generate Demand Report (15-min)',
                         'method' => 'post',
                         'action' => '/generate_demand_report/fifteen',
+                        'kind' => 'submit',
                         'tone' => 'secondary',
                     ],
                     [
@@ -1036,6 +1049,7 @@ final class ReportController extends Controller
                         'label' => 'Download Demand Export',
                         'method' => 'get',
                         'action' => '/download_demand_report',
+                        'kind' => 'export',
                         'tone' => 'secondary',
                     ],
                 ],

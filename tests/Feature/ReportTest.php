@@ -837,8 +837,10 @@ test('raw report page exposes legacy filter panel contract', function () {
             ->where('filterPanel.sections.1.fields.3.name', 'end_time')
             ->where('filterPanel.actions.0.method', 'post')
             ->where('filterPanel.actions.0.action', '/generate_raw_report')
+            ->where('filterPanel.actions.0.kind', 'submit')
             ->where('filterPanel.actions.1.method', 'get')
             ->where('filterPanel.actions.1.action', '/generate_raw_report_excel')
+            ->where('filterPanel.actions.1.kind', 'export')
         );
 });
 
@@ -853,10 +855,13 @@ test('consumption report page exposes hourly daily and export actions on the fil
             ->has('filterPanel.actions', 3)
             ->where('filterPanel.actions.0.label', 'Generate Consumption Report (Hourly)')
             ->where('filterPanel.actions.0.action', '/generate_consumption_report/hourly')
+            ->where('filterPanel.actions.0.kind', 'submit')
             ->where('filterPanel.actions.1.label', 'Generate Consumption Report (Daily)')
             ->where('filterPanel.actions.1.action', '/generate_consumption_report/daily')
+            ->where('filterPanel.actions.1.kind', 'submit')
             ->where('filterPanel.actions.2.label', 'Download Consumption Export')
             ->where('filterPanel.actions.2.action', '/download_consumption_report')
+            ->where('filterPanel.actions.2.kind', 'export')
         );
 });
 
@@ -890,5 +895,18 @@ test('site report page exposes inventory preview summary contract', function () 
             ->where('previewSummary.scopeMode', 'site')
             ->where('previewSummary.rangeMode', 'none')
             ->where('previewSummary.emptyTitle', 'Select an authorized site for building inventory output')
+        );
+});
+
+test('site report page marks workbook downloads as export actions', function () {
+    $response = $this->withSession(['loginID' => $this->admin->id])->get('/site_report');
+
+    $response
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('filterPanel.actions.0.kind', 'submit')
+            ->where('filterPanel.actions.1.kind', 'export')
+            ->where('filterPanel.actions.2.kind', 'export')
         );
 });
