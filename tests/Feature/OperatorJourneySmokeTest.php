@@ -4,20 +4,18 @@ use App\Models\Gateway;
 use App\Models\MeterData;
 use App\Models\Site;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Database\Seeders\Profiles\AbstractProfileSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
 $seedProfileAdminPassword = AbstractProfileSeeder::DEFAULT_PASSWORD;
 
-$fetchScenarioUser = function (string $name): array {
+$fetchScenarioUser = function (string $name): User {
     $user = User::query()->where('name', $name)->first();
 
     expect($user)->not->toBeNull();
 
-    return [
-        'id' => (int) $user->id,
-        'name' => $user->name,
-    ];
+    return $user;
 };
 
 test('fresh-install smoke journey has bootstrap data and navigates core operator pages', function () use ($seedProfileAdminPassword, $fetchScenarioUser) {
@@ -28,15 +26,15 @@ test('fresh-install smoke journey has bootstrap data and navigates core operator
     $admin = $fetchScenarioUser('admin_phase0');
 
     $loginResponse = $this->post('/login-user', [
-        'user_name' => $admin['name'],
+        'user_name' => $admin->name,
         'InputPassword' => $seedProfileAdminPassword,
     ]);
 
     $loginResponse
         ->assertRedirect('/site')
-        ->assertSessionHas('loginID', $admin['id']);
+        ->assertSessionHas('loginID', $admin->id);
 
-    $this->withSession(['loginID' => $admin['id']])
+    $this->withSession(['loginID' => $admin->id])
         ->get('/site')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
@@ -45,7 +43,7 @@ test('fresh-install smoke journey has bootstrap data and navigates core operator
             ->has('sites')
         );
 
-    $this->withSession(['loginID' => $admin['id']])
+    $this->withSession(['loginID' => $admin->id])
         ->get('/company')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
@@ -54,7 +52,26 @@ test('fresh-install smoke journey has bootstrap data and navigates core operator
             ->has('companies')
         );
 
-    $companyPayload = $this->withSession(['loginID' => $admin['id']])
+    $latestTelemetryTimestamp = MeterData::query()->max('datetime');
+    $latestTelemetryMeter = MeterData::query()->orderByDesc('datetime')->value('meter_id');
+
+    expect($latestTelemetryTimestamp)->not->toBeNull();
+    expect($latestTelemetryMeter)->not->toBeNull();
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Dashboard')
+            ->where('context.user.id', $admin->id)
+            ->where('context.user.name', (string) ($admin->user_real_name ?: $admin->name))
+            ->where('gatewaySummary.total', Gateway::query()->count())
+            ->where('telemetrySummary.lastReceivedAt', CarbonImmutable::parse((string) $latestTelemetryTimestamp)->toIso8601String())
+            ->where('telemetrySummary.recentTelemetry.0.meterId', (string) $latestTelemetryMeter)
+            ->where('telemetrySummary.recentTelemetry.0.status', 'online')
+        );
+
+    $companyPayload = $this->withSession(['loginID' => $admin->id])
         ->postJson('/company_list', [
             'draw' => 1,
             'start' => 0,
@@ -69,7 +86,7 @@ test('fresh-install smoke journey has bootstrap data and navigates core operator
     expect($companyPayload['recordsFiltered'])->toBeGreaterThan(0);
     expect($companyPayload['data'])->toBeArray();
 
-    $divisionPayload = $this->withSession(['loginID' => $admin['id']])
+    $divisionPayload = $this->withSession(['loginID' => $admin->id])
         ->postJson('/division_list', ['draw' => 1, 'start' => 0, 'length' => 10])
         ->assertOk()
         ->json();
@@ -85,13 +102,13 @@ test('operations-gateway-recovery smoke validates seeded recovery-aware context'
     $opsAdmin = $fetchScenarioUser('ops_admin_demo');
 
     $loginResponse = $this->post('/login-user', [
-        'user_name' => $opsAdmin['name'],
+        'user_name' => $opsAdmin->name,
         'InputPassword' => $seedProfileAdminPassword,
     ]);
 
     $loginResponse
         ->assertRedirect('/site')
-        ->assertSessionHas('loginID', $opsAdmin['id']);
+        ->assertSessionHas('loginID', $opsAdmin->id);
 
     $siteId = Site::query()->value('site_id');
 
@@ -106,7 +123,7 @@ test('operations-gateway-recovery smoke validates seeded recovery-aware context'
     expect($gatewayPayload['recordsFiltered'])->toBeGreaterThan(0);
     expect($gatewayPayload['data'])->toBeArray()->not->toBeEmpty();
 
-    $this->withSession(['loginID' => $opsAdmin['id']])
+    $this->withSession(['loginID' => $opsAdmin->id])
         ->get('/gateway')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
@@ -115,6 +132,26 @@ test('operations-gateway-recovery smoke validates seeded recovery-aware context'
             ->has('gateways')
         );
 
+    $latestTelemetryTimestamp = MeterData::query()->max('datetime');
+    $latestTelemetryMeter = MeterData::query()->orderByDesc('datetime')->value('meter_id');
+    $latestGatewaySoftRev = Gateway::query()->where('soft_rev', '2.12')->exists();
+
+    expect($latestTelemetryTimestamp)->not->toBeNull();
+    expect($latestTelemetryMeter)->not->toBeNull();
+
+    $this->actingAs($opsAdmin)
+        ->get(route('dashboard'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Dashboard')
+            ->where('context.user.id', $opsAdmin->id)
+            ->where('context.user.name', (string) ($opsAdmin->user_real_name ?: $opsAdmin->name))
+            ->where('gatewaySummary.total', Gateway::query()->count())
+            ->where('telemetrySummary.lastReceivedAt', CarbonImmutable::parse((string) $latestTelemetryTimestamp)->toIso8601String())
+            ->where('telemetrySummary.recentTelemetry.0.meterId', (string) $latestTelemetryMeter)
+            ->where('telemetrySummary.recentTelemetry.0.status', 'online')
+        );
+
     expect(MeterData::query()->count())->toBeGreaterThan(0);
-    expect(Gateway::query()->where('soft_rev', '2.12')->exists())->toBeTrue();
+    expect($latestGatewaySoftRev)->toBeTrue();
 });
