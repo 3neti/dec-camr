@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +41,9 @@ const props = defineProps<{
     actions: FilterAction[];
     csrfToken?: string;
 }>();
+const emit = defineEmits<{
+    stateChange: [values: Record<string, string>];
+}>();
 
 const allFields = computed(() => props.sections.flatMap((section) => section.fields));
 
@@ -54,6 +57,17 @@ const buttonClass = (tone?: 'primary' | 'secondary') =>
     tone === 'secondary'
         ? 'inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted'
         : 'inline-flex items-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800';
+
+watch(
+    formState,
+    (values) => {
+        emit('stateChange', { ...values });
+    },
+    {
+        deep: true,
+        immediate: true,
+    },
+);
 </script>
 
 <template>

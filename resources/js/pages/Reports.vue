@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import {
     downloadOfflineGateway,
     downloadOfflineMeter,
@@ -9,6 +10,7 @@ import {
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import ReportFamilySelector from '@/components/operator/ReportFamilySelector.vue';
 import ReportFilterPanel from '@/components/operator/ReportFilterPanel.vue';
+import ReportPreviewSummary from '@/components/operator/ReportPreviewSummary.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type ReportType = 'sap' | 'raw' | 'site' | 'consumption' | 'demand';
@@ -52,15 +54,36 @@ type ReportFilterPanelContract = {
     actions: FilterAction[];
 };
 
+type ReportPreviewSummaryContract = {
+    title: string;
+    description?: string;
+    statusLabel: string;
+    rowsLabel: string;
+    unitsLabel: string;
+    scopeMode: 'site' | 'site-meter';
+    rangeMode: 'none' | 'date' | 'datetime';
+    emptyTitle: string;
+    emptyDescription: string;
+    notes: string[];
+};
+
 const props = defineProps<{
     title: string;
     reportType: ReportType;
     reportFamilies: ReportFamily[];
     filterPanel: ReportFilterPanelContract;
+    previewSummary: ReportPreviewSummaryContract;
 }>();
 
 const page = usePage<{ csrfToken?: string }>();
 const csrfToken = page.props.csrfToken ?? '';
+const filterValues = ref<Record<string, string>>(
+    Object.fromEntries(
+        props.filterPanel.sections.flatMap((section) =>
+            section.fields.map((field) => [field.name, field.value === null || field.value === undefined ? '' : String(field.value)]),
+        ),
+    ),
+);
 
 const settingsActions = [
     { label: 'Build Building List', route: generateBuildingList.form() },
@@ -71,6 +94,67 @@ const offlineActions = [
     { label: 'Download Offline Gateway', href: downloadOfflineGateway.url() },
     { label: 'Download Offline Meter', href: downloadOfflineMeter.url() },
 ];
+
+const syncFilterValues = (values: Record<string, string>) => {
+    filterValues.value = values;
+};
+
+const activeFamilyLabel = computed(
+    () => props.reportFamilies.find((family) => family.active)?.label ?? props.title,
+);
+
+const previewScopeLabel = computed(() => {
+    const siteId = filterValues.value.site_id?.trim() || 'No site selected';
+
+    if (props.previewSummary.scopeMode === 'site-meter') {
+        const meterId = filterValues.value.meter_id?.trim() || 'No meter selected';
+
+        return `Building / Site ID: ${siteId} • Meter ID: ${meterId}`;
+    }
+
+    return `Building / Site ID: ${siteId}`;
+});
+
+const previewRangeLabel = computed(() => {
+    if (props.previewSummary.rangeMode === 'none') {
+        return 'No date range required for this report family.';
+    }
+
+    const startDate = filterValues.value.start_date?.trim() || 'Start date not selected';
+    const endDate = filterValues.value.end_date?.trim() || 'End date not selected';
+
+    if (props.previewSummary.rangeMode === 'date') {
+        return `${startDate} -> ${endDate}`;
+    }
+
+    const startTime = filterValues.value.start_time?.trim() || 'Start time not selected';
+    const endTime = filterValues.value.end_time?.trim() || 'End time not selected';
+
+    return `${startDate} ${startTime} -> ${endDate} ${endTime}`;
+});
+
+const previewMetrics = computed(() => [
+    {
+        label: 'Report Family',
+        value: activeFamilyLabel.value,
+    },
+    {
+        label: 'Scope',
+        value: previewScopeLabel.value,
+    },
+    {
+        label: 'Range',
+        value: previewRangeLabel.value,
+    },
+    {
+        label: 'Rows',
+        value: props.previewSummary.rowsLabel,
+    },
+    {
+        label: 'Units',
+        value: props.previewSummary.unitsLabel,
+    },
+]);
 </script>
 
 <template>
@@ -87,9 +171,20 @@ const offlineActions = [
                 :sections="props.filterPanel.sections"
                 :actions="props.filterPanel.actions"
                 :csrf-token="csrfToken"
+                @state-change="syncFilterValues"
             />
 
             <div class="grid gap-6">
+                <ReportPreviewSummary
+                    :title="props.previewSummary.title"
+                    :description="props.previewSummary.description"
+                    :status-label="props.previewSummary.statusLabel"
+                    :metrics="previewMetrics"
+                    :empty-title="props.previewSummary.emptyTitle"
+                    :empty-description="props.previewSummary.emptyDescription"
+                    :notes="props.previewSummary.notes"
+                />
+
                 <Card class="py-5">
                     <CardHeader class="px-5 pb-0">
                         <CardTitle>Report settings helpers</CardTitle>

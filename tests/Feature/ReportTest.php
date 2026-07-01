@@ -859,3 +859,36 @@ test('consumption report page exposes hourly daily and export actions on the fil
             ->where('filterPanel.actions.2.action', '/download_consumption_report')
         );
 });
+
+test('demand report page exposes preview summary contract', function () {
+    $response = $this->withSession(['loginID' => $this->admin->id])->get('/demand_report');
+
+    $response
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('reportType', 'demand')
+            ->where('previewSummary.title', 'Preview summary')
+            ->where('previewSummary.statusLabel', 'Awaiting preview')
+            ->where('previewSummary.rowsLabel', 'Preview not generated')
+            ->where('previewSummary.unitsLabel', 'kW')
+            ->where('previewSummary.scopeMode', 'site-meter')
+            ->where('previewSummary.rangeMode', 'datetime')
+            ->where('previewSummary.emptyTitle', 'Select a site, meter, and date-time window')
+        );
+});
+
+test('site report page exposes inventory preview summary contract', function () {
+    $response = $this->withSession(['loginID' => $this->admin->id])->get('/site_report');
+
+    $response
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('reportType', 'site')
+            ->where('previewSummary.unitsLabel', 'Inventory workbook rows')
+            ->where('previewSummary.scopeMode', 'site')
+            ->where('previewSummary.rangeMode', 'none')
+            ->where('previewSummary.emptyTitle', 'Select an authorized site for building inventory output')
+        );
+});

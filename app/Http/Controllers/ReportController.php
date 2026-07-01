@@ -730,6 +730,7 @@ final class ReportController extends Controller
                 ],
             ],
             'filterPanel' => $this->reportFilterPanel($reportType),
+            'previewSummary' => $this->reportPreviewSummary($reportType),
         ]);
     }
 
@@ -1037,6 +1038,101 @@ final class ReportController extends Controller
                         'action' => '/download_demand_report',
                         'tone' => 'secondary',
                     ],
+                ],
+            ],
+        };
+    }
+
+    /**
+     * @return array{
+     *     title: string,
+     *     description: string,
+     *     statusLabel: string,
+     *     rowsLabel: string,
+     *     unitsLabel: string,
+     *     scopeMode: string,
+     *     rangeMode: string,
+     *     emptyTitle: string,
+     *     emptyDescription: string,
+     *     notes: array<int, string>
+     * }
+     */
+    private function reportPreviewSummary(string $reportType): array
+    {
+        return match ($reportType) {
+            'sap' => [
+                'title' => 'Preview summary',
+                'description' => 'Confirm site scope, date coverage, and workbook expectations before generating the SAP export.',
+                'statusLabel' => 'Awaiting preview',
+                'rowsLabel' => 'Preview not generated',
+                'unitsLabel' => 'Workbook business fields',
+                'scopeMode' => 'site',
+                'rangeMode' => 'date',
+                'emptyTitle' => 'Choose an authorized site and date range',
+                'emptyDescription' => 'SAP preview remains empty until the legacy site scope and date-only range are submitted.',
+                'notes' => [
+                    'SAP preview and export keep the same legacy route contract.',
+                    'Date boundaries remain explicit and unchanged.',
+                ],
+            ],
+            'raw' => [
+                'title' => 'Preview summary',
+                'description' => 'Review the selected meter scope and date-time window before requesting raw telemetry output.',
+                'statusLabel' => 'Awaiting preview',
+                'rowsLabel' => 'Preview not generated',
+                'unitsLabel' => 'Mixed telemetry fields',
+                'scopeMode' => 'site-meter',
+                'rangeMode' => 'datetime',
+                'emptyTitle' => 'Select a site, meter, and full date-time range',
+                'emptyDescription' => 'Raw Data preview stays empty until the required legacy fields are provided.',
+                'notes' => [
+                    'Raw Data uses the existing meter identifier and timestamp boundaries.',
+                    'Export filenames and content types remain unchanged.',
+                ],
+            ],
+            'site' => [
+                'title' => 'Preview summary',
+                'description' => 'Building, Offline, and Site As-Built flows share the same site-level scope and workbook surface.',
+                'statusLabel' => 'Awaiting preview',
+                'rowsLabel' => 'Preview not generated',
+                'unitsLabel' => 'Inventory workbook rows',
+                'scopeMode' => 'site',
+                'rangeMode' => 'none',
+                'emptyTitle' => 'Select an authorized site for building inventory output',
+                'emptyDescription' => 'Building preview remains empty until the site-level inventory routes are submitted.',
+                'notes' => [
+                    'Site report and Site As-Built exports share the same legacy scope.',
+                    'Offline gateway and meter workbooks stay on their existing recovery helpers.',
+                ],
+            ],
+            'consumption' => [
+                'title' => 'Preview summary',
+                'description' => 'Review scope, range, and kWh expectations before generating hourly, daily, or export output.',
+                'statusLabel' => 'Awaiting preview',
+                'rowsLabel' => 'Preview not generated',
+                'unitsLabel' => 'kWh',
+                'scopeMode' => 'site-meter',
+                'rangeMode' => 'datetime',
+                'emptyTitle' => 'Select a site, meter, and date-time window',
+                'emptyDescription' => 'Consumption preview stays empty until the required legacy scope and range are provided.',
+                'notes' => [
+                    'Hourly and daily actions reuse the same legacy field names.',
+                    'Export continues to use the existing workbook route.',
+                ],
+            ],
+            'demand' => [
+                'title' => 'Preview summary',
+                'description' => 'Confirm kW demand scope and boundary intent before generating hourly or 15-minute demand views.',
+                'statusLabel' => 'Awaiting preview',
+                'rowsLabel' => 'Preview not generated',
+                'unitsLabel' => 'kW',
+                'scopeMode' => 'site-meter',
+                'rangeMode' => 'datetime',
+                'emptyTitle' => 'Select a site, meter, and date-time window',
+                'emptyDescription' => 'Demand preview remains empty until the required legacy scope and time boundaries are submitted.',
+                'notes' => [
+                    'Hourly and 15-minute demand actions share the same legacy filter contract.',
+                    'Demand export continues to use the existing workbook route.',
                 ],
             ],
         };
