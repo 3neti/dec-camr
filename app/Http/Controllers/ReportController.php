@@ -678,6 +678,57 @@ final class ReportController extends Controller
         return Inertia::render('Reports', [
             'title' => $title,
             'reportType' => $reportType,
+            'reportFamilies' => [
+                [
+                    'id' => 'raw',
+                    'label' => 'Raw Data',
+                    'description' => 'Detailed interval readings and raw export workflows.',
+                    'href' => '/raw_report',
+                    'active' => $reportType === 'raw',
+                ],
+                [
+                    'id' => 'demand',
+                    'label' => 'KW Demand',
+                    'description' => 'Demand windows, 15-minute views, and workbook exports.',
+                    'href' => '/demand_report',
+                    'active' => $reportType === 'demand',
+                ],
+                [
+                    'id' => 'consumption',
+                    'label' => 'KWh Consumption',
+                    'description' => 'Hourly and daily consumption rollups.',
+                    'href' => '/consumption_report',
+                    'active' => $reportType === 'consumption',
+                ],
+                [
+                    'id' => 'sap',
+                    'label' => 'SAP',
+                    'description' => 'SAP-oriented export flows and workbook outputs.',
+                    'href' => '/sap_report',
+                    'active' => $reportType === 'sap',
+                ],
+                [
+                    'id' => 'building',
+                    'label' => 'Building',
+                    'description' => 'Building-level reporting and site workbook helpers.',
+                    'href' => '/site_report',
+                    'active' => $reportType === 'site',
+                ],
+                [
+                    'id' => 'offline',
+                    'label' => 'Offline',
+                    'description' => 'Offline gateway and meter workbook downloads.',
+                    'href' => '/site_report',
+                    'active' => false,
+                ],
+                [
+                    'id' => 'site-as-built',
+                    'label' => 'Site As-Built',
+                    'description' => 'Site as-built workbook exports on the building report surface.',
+                    'href' => '/site_report',
+                    'active' => false,
+                ],
+            ],
         ]);
     }
 

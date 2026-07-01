@@ -795,3 +795,25 @@ test('template exports return downloadable report files', function () {
     assertWorksheetContainsToken($offlineMeterParsed['rows_by_sheet']['Sheet1'] ?? [], 'Meter Description');
     assertWorksheetContainsToken($offlineMeterParsed['rows_by_sheet']['Sheet1'] ?? [], 'Gateway Serial Number');
 });
+
+test('site report page exposes legacy report family selector metadata', function () {
+    $response = $this->withSession(['loginID' => $this->admin->id])->get('/site_report');
+
+    $response
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('reportType', 'site')
+            ->has('reportFamilies', 7)
+            ->where('reportFamilies.0.label', 'Raw Data')
+            ->where('reportFamilies.1.label', 'KW Demand')
+            ->where('reportFamilies.2.label', 'KWh Consumption')
+            ->where('reportFamilies.3.label', 'SAP')
+            ->where('reportFamilies.4.label', 'Building')
+            ->where('reportFamilies.4.active', true)
+            ->where('reportFamilies.5.label', 'Offline')
+            ->where('reportFamilies.5.href', '/site_report')
+            ->where('reportFamilies.6.label', 'Site As-Built')
+            ->where('reportFamilies.6.href', '/site_report')
+        );
+});
