@@ -175,6 +175,59 @@ class BuildDashboardDataContractAction
                 'ssh' => Gateway::query()->where('update_rtu_ssh', 1)->count(),
                 'forceLoadProfile' => Gateway::query()->where('update_rtu_force_lp', 1)->count(),
             ],
+            'pendingUpdatePanel' => Gateway::query()
+                ->get([
+                    'gateway_sn',
+                    'gateway_mac',
+                    'gateway_description',
+                    'site_code',
+                    'last_log_update',
+                    'update_rtu',
+                    'update_rtu_location',
+                    'update_rtu_force_lp',
+                ])
+                ->map(function (Gateway $gateway) use ($onlineCutoff, $offlineCutoff): array {
+                    $lastLogUpdate = $this->parseLegacyTimestamp($gateway->last_log_update);
+                    $pendingFlags = $this->pendingPanelFlags($gateway);
+                    $status = $lastLogUpdate === null
+                        ? 'offline'
+                        : $this->healthState($lastLogUpdate, $onlineCutoff, $offlineCutoff);
+
+                    return [
+                        'gatewaySn' => (string) $gateway->gateway_sn,
+                        'gatewayMac' => (string) $gateway->gateway_mac,
+                        'description' => $gateway->gateway_description !== null ? (string) $gateway->gateway_description : null,
+                        'siteCode' => $gateway->site_code !== null ? (string) $gateway->site_code : null,
+                        'lastLogUpdate' => $lastLogUpdate?->toIso8601String(),
+                        'status' => $status,
+                        'pendingFlags' => $pendingFlags,
+                        'pendingFlagCount' => count($pendingFlags),
+                    ];
+                })
+                ->filter(fn (array $gateway): bool => $gateway['pendingFlagCount'] > 0)
+                ->sort(function (array $left, array $right): int {
+                    $countComparison = $right['pendingFlagCount'] <=> $left['pendingFlagCount'];
+
+                    if ($countComparison !== 0) {
+                        return $countComparison;
+                    }
+
+                    $statusComparison = $this->gatewayStatusRank($left['status']) <=> $this->gatewayStatusRank($right['status']);
+
+                    if ($statusComparison !== 0) {
+                        return $statusComparison;
+                    }
+
+                    $timestampComparison = strcmp($left['lastLogUpdate'] ?? '', $right['lastLogUpdate'] ?? '');
+
+                    if ($timestampComparison !== 0) {
+                        return $timestampComparison;
+                    }
+
+                    return strcmp($left['gatewaySn'], $right['gatewaySn']);
+                })
+                ->values()
+                ->all(),
             'operationalCommandBar' => $operationalCommandTarget === null ? null : [
                 'gatewaySn' => $operationalCommandTarget['gatewaySn'],
                 'gatewayMac' => $operationalCommandTarget['gatewayMac'],
@@ -582,6 +635,40 @@ class BuildDashboardDataContractAction
             'stale' => 1,
             default => 2,
         };
+    }
+
+    /**
+     * @return list<array{key: string, label: string, resetRouteKey: string}>
+     */
+    private function pendingPanelFlags(object $row): array
+    {
+        $flags = [];
+
+        if ((int) ($row->update_rtu ?? 0) === 1) {
+            $flags[] = [
+                'key' => 'csv',
+                'label' => 'CSV',
+                'resetRouteKey' => 'reset_update_csv',
+            ];
+        }
+
+        if ((int) ($row->update_rtu_location ?? 0) === 1) {
+            $flags[] = [
+                'key' => 'location',
+                'label' => 'Location',
+                'resetRouteKey' => 'reset_update_location',
+            ];
+        }
+
+        if ((int) ($row->update_rtu_force_lp ?? 0) === 1) {
+            $flags[] = [
+                'key' => 'force_lp',
+                'label' => 'Force LP',
+                'resetRouteKey' => 'reset_force_lp',
+            ];
+        }
+
+        return $flags;
     }
 
     /**

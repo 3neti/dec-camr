@@ -18,6 +18,7 @@ import KpiCard from '@/components/operator/KpiCard.vue';
 import MeterHealthGrid from '@/components/operator/MeterHealthGrid.vue';
 import OperationalCommandBar from '@/components/operator/OperationalCommandBar.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
+import PendingUpdatePanel from '@/components/operator/PendingUpdatePanel.vue';
 import QuickActionGrid from '@/components/operator/QuickActionGrid.vue';
 import RecentTelemetryList from '@/components/operator/RecentTelemetryList.vue';
 import StatusChip from '@/components/operator/StatusChip.vue';
@@ -81,6 +82,20 @@ type DashboardProps = {
         ssh: number;
         forceLoadProfile: number;
     };
+    pendingUpdatePanel: Array<{
+        gatewaySn: string;
+        gatewayMac: string;
+        description: string | null;
+        siteCode: string | null;
+        lastLogUpdate: string | null;
+        status: TelemetryStatus;
+        pendingFlags: Array<{
+            key: string;
+            label: string;
+            resetRouteKey: string;
+        }>;
+        pendingFlagCount: number;
+    }>;
     operationalCommandBar: {
         gatewaySn: string;
         gatewayMac: string;
@@ -383,6 +398,27 @@ const telemetryTimelineItems = computed(() =>
     })),
 );
 
+function routeForGatewayCommand(routeKey: string, mac: string): string {
+    switch (routeKey) {
+        case 'get_content_csv':
+            return get_content_csv.url({ mac });
+        case 'reset_update_csv':
+            return reset_update_csv.url({ mac });
+        case 'get_content_location':
+            return get_content_location.url({ mac });
+        case 'reset_update_location':
+            return reset_update_location.url({ mac });
+        case 'force_lp':
+            return force_lp.url({ mac });
+        case 'reset_force_lp':
+            return reset_force_lp.url({ mac });
+        case 'remote_ssh':
+            return remote_ssh.url({ mac });
+        default:
+            return '#';
+    }
+}
+
 const operationalCommandTarget = computed(() => {
     if (props.operationalCommandBar === null) {
         return null;
@@ -405,37 +441,33 @@ const operationalCommands = computed(() => {
     const mac = props.operationalCommandBar.gatewayMac;
 
     return props.operationalCommandBar.commands.map((command) => {
-        const href = (() => {
-            switch (command.routeKey) {
-                case 'get_content_csv':
-                    return get_content_csv.url({ mac });
-                case 'reset_update_csv':
-                    return reset_update_csv.url({ mac });
-                case 'get_content_location':
-                    return get_content_location.url({ mac });
-                case 'reset_update_location':
-                    return reset_update_location.url({ mac });
-                case 'force_lp':
-                    return force_lp.url({ mac });
-                case 'reset_force_lp':
-                    return reset_force_lp.url({ mac });
-                case 'remote_ssh':
-                    return remote_ssh.url({ mac });
-                default:
-                    return '#';
-            }
-        })();
-
         return {
             key: command.key,
             title: command.title,
             description: command.description,
             enabled: command.enabled,
             disabledReason: command.disabledReason,
-            href,
+            href: routeForGatewayCommand(command.routeKey, mac),
         };
     });
 });
+
+const pendingUpdateItems = computed(() =>
+    props.pendingUpdatePanel.map((item) => ({
+        gatewaySn: item.gatewaySn,
+        gatewayMac: item.gatewayMac,
+        description: item.description,
+        siteCode: item.siteCode,
+        lastLogUpdate: item.lastLogUpdate,
+        status: item.status,
+        pendingFlags: item.pendingFlags.map((flag) => ({
+            key: flag.key,
+            label: flag.label,
+            resetHref: routeForGatewayCommand(flag.resetRouteKey, item.gatewayMac),
+        })),
+        reviewHref: gateway(),
+    })),
+);
 
 const quickActions = computed(() => {
     const role = props.context.user.role.toLowerCase();
@@ -759,6 +791,8 @@ defineOptions({
                     :target="operationalCommandTarget"
                     :commands="operationalCommands"
                 />
+
+                <PendingUpdatePanel :items="pendingUpdateItems" />
 
                 <Card class="py-5">
                     <CardHeader class="px-5 pb-0">
