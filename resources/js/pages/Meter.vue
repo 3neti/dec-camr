@@ -146,6 +146,11 @@ const columns = [
             :columns="columns"
             :rows="props.meters ?? []"
             row-key="meter_id"
+            :filter-bar="{
+                queryPlaceholder: 'Search meter name, alternate name, or status',
+                queryKeys: ['meter_name', 'meter_default_name', 'meter_status'],
+                statusKey: 'meter_status',
+            }"
         />
     </OperatorPage>
 </template>

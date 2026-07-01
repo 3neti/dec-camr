@@ -92,6 +92,11 @@ const columns = [
             :columns="columns"
             :rows="props.gateways"
             row-key="rtu_id"
+            :filter-bar="{
+                queryPlaceholder: 'Search serial, MAC, IP, or site code',
+                queryKeys: ['gateway_sn', 'gateway_mac', 'gateway_ip', 'site_code'],
+                scopeKey: 'site_code',
+            }"
         />
     </OperatorPage>
 </template>

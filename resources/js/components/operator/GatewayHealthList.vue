@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { RouteDefinition } from '@/wayfinder';
 import EmptyState from './EmptyState.vue';
+import FilterBar from './FilterBar.vue';
 import StatusChip from './StatusChip.vue';
 
 type GatewayStatus = 'online' | 'stale' | 'offline';
@@ -50,6 +52,60 @@ const statusLabel = {
     stale: 'Stale',
     offline: 'Offline',
 } as const;
+
+const query = ref('');
+const status = ref('all');
+const scope = ref('all');
+
+const statusOptions = [
+    { label: 'All statuses', value: 'all' },
+    { label: 'Online', value: 'online' },
+    { label: 'Stale', value: 'stale' },
+    { label: 'Offline', value: 'offline' },
+];
+
+const scopeOptions = computed(() => {
+    const scopes = Array.from(
+        new Set(
+            props.items
+                .map((item) => item.siteCode?.trim() ?? '')
+                .filter((value) => value !== ''),
+        ),
+    ).sort((left, right) => left.localeCompare(right));
+
+    return [
+        { label: 'All scopes', value: 'all' },
+        ...scopes.map((value) => ({ label: value, value })),
+    ];
+});
+
+const filteredItems = computed(() => {
+    const search = query.value.trim().toLowerCase();
+
+    return props.items.filter((item) => {
+        if (status.value !== 'all' && item.status !== status.value) {
+            return false;
+        }
+
+        if (scope.value !== 'all' && (item.siteCode ?? '') !== scope.value) {
+            return false;
+        }
+
+        if (search === '') {
+            return true;
+        }
+
+        return [
+            item.gatewaySn,
+            item.gatewayMac,
+            item.description ?? '',
+            item.siteCode ?? '',
+            item.pendingUpdates.join(' '),
+        ].some((value) => value.toLowerCase().includes(search));
+    });
+});
+
+const resultsLabel = computed(() => `${filteredItems.value.length} of ${props.items.length} gateways visible`);
 
 function formatTimestamp(value: string | null | undefined): string {
     if (!value) {
@@ -116,15 +172,32 @@ function pluralize(value: number): string {
         </CardHeader>
 
         <CardContent class="px-5">
+            <FilterBar
+                v-if="props.items.length > 0"
+                v-model:query="query"
+                v-model:status="status"
+                v-model:scope="scope"
+                query-placeholder="Search gateway serial, MAC, description, or pending update"
+                :status-options="statusOptions"
+                :scope-options="scopeOptions"
+                :results-label="resultsLabel"
+            />
+
             <EmptyState
                 v-if="props.items.length === 0"
                 :title="props.emptyTitle"
                 :description="props.emptyDescription"
             />
 
+            <EmptyState
+                v-else-if="filteredItems.length === 0"
+                title="No matching gateways"
+                description="Adjust the current search, status, or scope filters to broaden the fleet view."
+            />
+
             <ul v-else class="divide-y rounded-lg border">
                 <li
-                    v-for="item in props.items"
+                    v-for="item in filteredItems"
                     :key="item.id"
                     class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
                 >

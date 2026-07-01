@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { RouteDefinition } from '@/wayfinder';
 import EmptyState from './EmptyState.vue';
+import FilterBar from './FilterBar.vue';
 import StatusChip from './StatusChip.vue';
 
 type MeterStatus = 'online' | 'stale' | 'offline';
@@ -49,6 +51,61 @@ const statusLabel = {
     stale: 'Stale',
     offline: 'Offline',
 } as const;
+
+const query = ref('');
+const status = ref('all');
+const scope = ref('all');
+
+const statusOptions = [
+    { label: 'All statuses', value: 'all' },
+    { label: 'Online', value: 'online' },
+    { label: 'Stale', value: 'stale' },
+    { label: 'Offline', value: 'offline' },
+];
+
+const scopeOptions = computed(() => {
+    const scopes = Array.from(
+        new Set(
+            props.items
+                .map((item) => item.siteCode?.trim() ?? '')
+                .filter((value) => value !== ''),
+        ),
+    ).sort((left, right) => left.localeCompare(right));
+
+    return [
+        { label: 'All scopes', value: 'all' },
+        ...scopes.map((value) => ({ label: value, value })),
+    ];
+});
+
+const filteredItems = computed(() => {
+    const search = query.value.trim().toLowerCase();
+
+    return props.items.filter((item) => {
+        if (status.value !== 'all' && item.status !== status.value) {
+            return false;
+        }
+
+        if (scope.value !== 'all' && (item.siteCode ?? '') !== scope.value) {
+            return false;
+        }
+
+        if (search === '') {
+            return true;
+        }
+
+        return [
+            item.meterId,
+            item.meterName ?? '',
+            item.defaultName ?? '',
+            item.gatewaySn ?? '',
+            item.gatewayMac ?? '',
+            item.siteCode ?? '',
+        ].some((value) => value.toLowerCase().includes(search));
+    });
+});
+
+const resultsLabel = computed(() => `${filteredItems.value.length} of ${props.items.length} meters visible`);
 
 function formatMeterLabel(item: MeterHealthItem): string {
     if (item.meterName && item.meterName.trim() !== '') {
@@ -123,15 +180,32 @@ function formatRelativeAge(value: string | null | undefined): string {
         </CardHeader>
 
         <CardContent class="px-5">
+            <FilterBar
+                v-if="props.items.length > 0"
+                v-model:query="query"
+                v-model:status="status"
+                v-model:scope="scope"
+                query-placeholder="Search meter, alternate name, gateway, or scope"
+                :status-options="statusOptions"
+                :scope-options="scopeOptions"
+                :results-label="resultsLabel"
+            />
+
             <EmptyState
                 v-if="props.items.length === 0"
                 :title="props.emptyTitle"
                 :description="props.emptyDescription"
             />
 
+            <EmptyState
+                v-else-if="filteredItems.length === 0"
+                title="No matching meters"
+                description="Adjust the current search, status, or scope filters to broaden the health view."
+            />
+
             <div v-else class="grid gap-3 xl:grid-cols-2">
                 <article
-                    v-for="item in props.items"
+                    v-for="item in filteredItems"
                     :key="item.id"
                     class="flex h-full flex-col gap-3 rounded-lg border p-4"
                 >
