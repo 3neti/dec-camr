@@ -15,6 +15,7 @@ import { user } from '@/actions/App/Http/Controllers/UserController';
 import AttentionList from '@/components/operator/AttentionList.vue';
 import KpiCard from '@/components/operator/KpiCard.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
+import QuickActionGrid from '@/components/operator/QuickActionGrid.vue';
 import RecentTelemetryList from '@/components/operator/RecentTelemetryList.vue';
 import StatusChip from '@/components/operator/StatusChip.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -635,27 +636,7 @@ defineOptions({
                     </CardContent>
                 </Card>
 
-                <Card class="py-5">
-                    <CardHeader class="px-5 pb-0">
-                        <CardTitle>Quick Actions</CardTitle>
-                        <CardDescription>Preserved workflows routed into existing maintenance and reporting surfaces.</CardDescription>
-                    </CardHeader>
-                    <CardContent class="grid gap-3 px-5">
-                        <Link
-                            v-for="action in quickActions"
-                            :key="action.id"
-                            :href="action.href"
-                            class="rounded-lg border p-3 text-left transition hover:bg-muted"
-                        >
-                            <p class="text-sm font-medium text-foreground">
-                                {{ action.title }}
-                            </p>
-                            <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                                {{ action.description }}
-                            </p>
-                        </Link>
-                    </CardContent>
-                </Card>
+                <QuickActionGrid :items="quickActions" />
             </div>
         </section>
     </OperatorPage>
