@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import type { RouteDefinition } from '@/wayfinder';
 import EmptyState from './EmptyState.vue';
 import StatusChip from './StatusChip.vue';
 
@@ -13,7 +14,7 @@ type AttentionItem = {
     description: string;
     severity: AttentionSeverity;
     context?: string;
-    href?: string;
+    href?: string | RouteDefinition<'get'>;
     actionLabel?: string;
 };
 
