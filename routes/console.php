@@ -4,6 +4,8 @@ use App\Actions\Ui\SimulateTelemetryAction;
 use App\Models\Company;
 use App\Models\Division;
 use App\Models\User;
+use App\Support\Ui\Scenarios\OperatorScenarioRegistry;
+use App\Support\Ui\Scenarios\OperatorScenarioRunner;
 use Carbon\CarbonImmutable;
 use Database\Seeders\Profiles\AbstractProfileSeeder;
 use Database\Seeders\SeedProfileManager;
@@ -65,7 +67,80 @@ Artisan::command('camr:seed-profile {--profile=demo}', function (): int {
     return self::SUCCESS;
 })->purpose('Seed a deterministic CAMR UI foundation profile');
 
-Artisan::command('camr:simulate {--profile=demo} {--duration=10m} {--speed=real} {--scenario=normal} {--deterministic=1} {--dry-run} {--allow-production}', function (): int {
+Artisan::command('camr:scenario {scenario?} {--list} {--dry-run} {--no-seed} {--no-simulate} {--anchor=} {--allow-production}', function (): int {
+    $registry = new OperatorScenarioRegistry;
+
+    if ((bool) $this->option('list')) {
+        $definitions = $registry->all();
+        $this->info('Available CAMR lifecycle scenarios:');
+        foreach ($definitions as $definition) {
+            $this->line(sprintf('- %s (%s)', $definition->key, $definition->title));
+            $this->line(sprintf('  persona=%s, seed=%s, simulator=%s', $definition->persona, $definition->seedProfile, $definition->simulatorScenario));
+        }
+
+        return self::SUCCESS;
+    }
+
+    $scenario = $this->argument('scenario');
+    if (! is_string($scenario) || trim($scenario) === '') {
+        $this->error('Scenario key is required unless --list is used.');
+
+        return self::FAILURE;
+    }
+
+    $runner = new OperatorScenarioRunner(
+        registry: $registry,
+        simulator: app(SimulateTelemetryAction::class),
+    );
+
+    try {
+        $result = $runner->run(
+            scenarioKey: $scenario,
+            dryRun: (bool) $this->option('dry-run'),
+            runSeed: ! (bool) $this->option('no-seed'),
+            runSimulation: ! (bool) $this->option('no-simulate'),
+            anchor: $this->option('anchor') === null ? null : (string) $this->option('anchor'),
+            allowProduction: (bool) $this->option('allow-production'),
+        );
+    } catch (InvalidArgumentException $exception) {
+        $this->error($exception->getMessage());
+        if (str_contains($exception->getMessage(), 'Unknown scenario:')) {
+            $this->line('Available scenarios: '.implode(', ', array_keys($registry->all())));
+        }
+
+        return self::FAILURE;
+    }
+
+    $definition = $result['scenario'];
+    $run = $result['run'];
+
+    $this->info(sprintf('Scenario: %s', $definition['key']));
+    $this->line(sprintf('Title: %s', $definition['title']));
+    $this->line(sprintf('Persona: %s', $definition['persona']));
+    $this->line(sprintf('Seed profile: %s', $definition['seed_profile']));
+    $this->line(sprintf('Simulator: %s / %s @ %s', $definition['simulator_scenario'], $definition['simulator_speed'], $definition['simulator_duration']));
+    if ($definition['deterministic_anchor'] !== null) {
+        $this->line(sprintf('Scenario default anchor: %s', $definition['deterministic_anchor']));
+    }
+    if ($run['dry_run']) {
+        $this->line('Mode: dry-run');
+    }
+
+    $this->line(sprintf('Seed status: %s (profile=%s)', $run['seed']['status'], $run['seed']['profile']));
+    $this->line(sprintf('Simulation status: %s (scenario=%s)', $run['simulate']['status'], $run['simulate']['scenario']));
+
+    if (is_string($this->option('anchor')) && $this->option('anchor') !== '') {
+        $this->line(sprintf('Anchor: %s', (string) $this->option('anchor')));
+    } elseif (($definition['deterministic_anchor'] ?? null) !== null) {
+        $this->line(sprintf('Anchor: %s', (string) $definition['deterministic_anchor']));
+    }
+
+    $this->line(sprintf('Suggested next step: %s', $result['metadata']['suggested_test_filter'] ?? 'none'));
+
+    return self::SUCCESS;
+})->purpose('Run a lifecycle scenario (seed + simulator orchestration)');
+
+Artisan::command('camr:simulate {--profile=demo} {--duration=10m} {--speed=real} {--scenario=normal} {--deterministic=1} {--anchor=} {--dry-run} {--allow-production}', function (): int {
     if (app()->environment('production') && ! (bool) $this->option('allow-production')) {
         $this->error('camr:simulate is disabled in production. Use --allow-production if this is intentional.');
 
@@ -116,19 +191,31 @@ Artisan::command('camr:simulate {--profile=demo} {--duration=10m} {--speed=real}
     $deterministicMode = in_array(strtolower($deterministic), ['1', 'true'], true);
     $simulator = app(SimulateTelemetryAction::class);
 
-    $summary = $simulator->simulate(
-        durationInput: $duration,
-        speed: $speed,
-        scenario: $scenario,
-        profile: $profile,
-        dryRun: $dryRun,
-        deterministic: $deterministicMode
-    );
+    $anchor = $this->option('anchor');
+
+    try {
+        $summary = $simulator->simulate(
+            durationInput: $duration,
+            speed: $speed,
+            scenario: $scenario,
+            profile: $profile,
+            dryRun: $dryRun,
+            deterministic: $deterministicMode,
+            anchor: $anchor === null ? null : (string) $anchor
+        );
+    } catch (InvalidArgumentException $exception) {
+        $this->error($exception->getMessage());
+
+        return self::FAILURE;
+    }
 
     $this->info(sprintf('Simulation scenario: %s', $scenario));
     $this->info(sprintf('Profile: %s', $profile));
     $this->info(sprintf('Speed: %s', $speed));
     $this->info(sprintf('Deterministic mode: %s', $deterministicMode ? 'enabled' : 'disabled'));
+    if ($deterministicMode) {
+        $this->info(sprintf('Anchor: %s', $anchor ?: '2026-07-01 08:00:00'));
+    }
     $this->info(sprintf('Dry run: %s', $dryRun ? 'yes' : 'no'));
     $this->info(sprintf('Rows inserted: %d', $summary['rows_inserted']));
     $this->info(sprintf('Meters covered: %d', $summary['meters_covered']));

@@ -140,3 +140,15 @@ These scenarios are not test implementations yet; they define scripts that can l
 - `docs/ui/roles/` for persona-specific scenario notes (future).
 - `tests/Browser/operator_journeys/` for future browser implementations.
 - `tests/Feature/` for page-level flow coverage.
+
+## Scenario Runner Integration
+
+Each listed scenario should map to a deterministic lifecycle orchestration command:
+
+```bash
+php artisan camr:scenario <scenario-key>
+```
+
+Use `--dry-run` for safe planning and `--anchor="2026-07-01 08:00:00"` for deterministic replay.
+
+This keeps demonstration scripts aligned with the same preparation path used for journey work.

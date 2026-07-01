@@ -14,6 +14,8 @@ use InvalidArgumentException;
 
 final class SimulateTelemetryAction
 {
+    private const DETERMINISTIC_DEFAULT_ANCHOR = '2026-07-01 08:00:00';
+
     private const PROFILE_MINIMAL = 'minimal';
 
     private const PROFILE_DEMO = 'demo';
@@ -51,6 +53,7 @@ final class SimulateTelemetryAction
         string $profile = 'demo',
         bool $dryRun = false,
         bool $deterministic = true,
+        ?string $anchor = null,
     ): array {
         $scenario = $this->validateScenario($scenario);
         $profile = $this->validateProfile($profile);
@@ -83,7 +86,7 @@ final class SimulateTelemetryAction
         $updatedSiteIds = [];
 
         $timeAnchor = $deterministic
-            ? CarbonImmutable::now()->startOfMinute()
+            ? $this->resolveDeterministicAnchor($anchor)
             : CarbonImmutable::now();
         $startTime = $timeAnchor->subMinutes($durationMinutes)->startOfMinute();
         $midpointStep = (int) max(1, intdiv($steps, 2));
@@ -306,6 +309,23 @@ final class SimulateTelemetryAction
         }
 
         return $normalized;
+    }
+
+    private function resolveDeterministicAnchor(?string $anchor): CarbonImmutable
+    {
+        $rawAnchor = trim((string) ($anchor === null || $anchor === '' ? self::DETERMINISTIC_DEFAULT_ANCHOR : $anchor));
+        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $rawAnchor);
+        $parseErrors = \DateTimeImmutable::getLastErrors();
+
+        if (! $parsed instanceof \DateTimeImmutable) {
+            throw new InvalidArgumentException(sprintf('Invalid anchor format: %s. Expected Y-m-d H:i:s', $rawAnchor));
+        }
+
+        if ($parseErrors !== false && ($parseErrors['error_count'] > 0 || $parseErrors['warning_count'] > 0)) {
+            throw new InvalidArgumentException(sprintf('Invalid anchor format: %s. Expected Y-m-d H:i:s', $rawAnchor));
+        }
+
+        return CarbonImmutable::instance($parsed)->startOfMinute();
     }
 
     private function seedReportWindowHints(CarbonImmutable $timestamp, array $siteIds): void

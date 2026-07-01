@@ -197,6 +197,7 @@ Seeded rows establish structure. Phase 0.25 adds a stateful layer that mutates p
 - `php artisan camr:simulate --scenario=offline-recovery`
 - `php artisan camr:simulate --scenario=report-window`
 - `camr:simulate` validates `--profile`, `--speed`, and `--scenario` and rejects unknown values with explicit guidance.
+- Deterministic mode uses `--anchor=<Y-m-d H:i:s>` for fixed timeline replay, defaulting to `2026-07-01 08:00:00` when omitted.
 
 ## Migration-Ready Acceptance Criteria
 

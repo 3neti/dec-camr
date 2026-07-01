@@ -130,6 +130,22 @@ The simulator phase is therefore required prior to full Layer 3 execution for hi
 - Browser tests for cross-page operator workflows and long-form journeys.
 - Optional Playwright/Cypress parity if browser suite requires richer orchestration.
 
+## Scenario Orchestration (Phase 0.5 foundation)
+
+Before journey execution, use the lifecycle scenario runner to standardize environment preparation:
+
+```bash
+php artisan camr:scenario <scenario-key>
+```
+
+Recommended sequence:
+
+1. `php artisan camr:scenario <scenario-key> --dry-run` (quick validity check)
+2. `php artisan camr:scenario <scenario-key>` (prepare data + lifecycle simulation)
+3. run operator flow assertions
+
+Scenario runner output now supplies metadata and suggested next steps to make journey test selection explicit.
+
 ## Suggested Test Naming Convention
 
 - `...Test.php` for feature tests,

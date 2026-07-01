@@ -32,6 +32,7 @@ Implementation now uses the following command shape:
 - `php artisan camr:simulate --profile=heavy --duration=1h --speed=fast`
 - `php artisan camr:simulate --scenario=offline-recovery`
 - `php artisan camr:simulate --scenario=report-window`
+- `php artisan camr:simulate --profile=demo --duration=10m --deterministic=1 --anchor="2026-07-01 08:00:00"`
 
 Production guard is enforced by default in the command implementation; add `--allow-production` only for approved local/manual validation.
 
@@ -49,7 +50,11 @@ Production guard is enforced by default in the command implementation; add `--al
   - fixed profile scopes,
   - ordered meter/gateway selection,
   - deterministic scenario transition rules,
-  - controlled timestamp progression based on command execution window.
+  - deterministic timestamp anchor (`--anchor=<Y-m-d H:i:s>`) with a fixed default of `2026-07-01 08:00:00`.
+- Timestamp anchor behavior:
+  - `--anchor` accepts only format `Y-m-d H:i:s`.
+  - when not provided, deterministic mode uses fixed default `2026-07-01 08:00:00`.
+  - invalid anchor format fails fast with an explicit validation error.
 - Set `--deterministic=0` only for non-reproducible local experimentation; this mode is expected to behave differently and is not used by the standard phase 0 acceptance path.
 
 ## Simulation Profiles
@@ -137,3 +142,19 @@ Recommended order:
 - implement deterministic, seed-safe mutation engine,
 - add safety guardrails and execution telemetry,
 - wire into local docs and demo scripts.
+
+## Lifecycle Orchestration Integration
+
+Use lifecycle scenario orchestration before journey/demonstration runs:
+
+```bash
+php artisan camr:scenario <scenario-key>
+```
+
+This command chains:
+
+- seed profile,
+- simulator scenario,
+- deterministic anchor (if configured).
+
+A dry-run variant validates scenario compatibility before mutating state.
