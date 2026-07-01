@@ -173,11 +173,11 @@ final class MinimalProfileSeeder extends AbstractProfileSeeder
                 return;
             }
 
-            $this->ensureUserSiteAccess($adminProfile, (int) $site->site_id, $admin);
-            $this->ensureUserSiteAccess($operationsUser, (int) $site->site_id, $admin);
+            $this->ensureUserSiteAccess($adminProfile, (int) $site->site_id, $adminProfile);
+            $this->ensureUserSiteAccess($operationsUser, (int) $site->site_id, $adminProfile);
 
             if ((string) $siteDefinition['site_code'] !== 'SITE-MIN-02') {
-                $this->ensureUserSiteAccess($analystUser, (int) $site->site_id, $admin);
+                $this->ensureUserSiteAccess($analystUser, (int) $site->site_id, $adminProfile);
             }
         });
 
