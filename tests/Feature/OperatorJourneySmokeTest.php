@@ -4,13 +4,13 @@ use App\Models\Building;
 use App\Models\Gateway;
 use App\Models\Meter;
 use App\Models\MeterData;
-use App\Models\Site;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\Profiles\AbstractProfileSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
 $seedProfileAdminPassword = AbstractProfileSeeder::DEFAULT_PASSWORD;
+$scenarioAnchor = CarbonImmutable::create(2026, 7, 1, 8, 0, 0);
 
 $fetchScenarioUser = function (string $name): User {
     $user = User::query()->where('name', $name)->first();
@@ -20,7 +20,9 @@ $fetchScenarioUser = function (string $name): User {
     return $user;
 };
 
-test('fresh-install smoke journey has bootstrap data and navigates core operator pages', function () use ($seedProfileAdminPassword, $fetchScenarioUser) {
+test('fresh-install smoke journey has bootstrap data and navigates core operator pages', function () use ($seedProfileAdminPassword, $fetchScenarioUser, $scenarioAnchor) {
+    $this->travelTo($scenarioAnchor);
+
     $this->artisan('camr:scenario fresh-install-smoke')
         ->assertSuccessful()
         ->expectsOutputToContain('Scenario: fresh-install-smoke');
@@ -94,12 +96,16 @@ test('fresh-install smoke journey has bootstrap data and navigates core operator
         ->json();
 
     expect($divisionPayload['recordsTotal'])->toBeGreaterThan(0);
+    $this->travelBack();
 });
 
-test('operations-gateway-recovery smoke validates seeded recovery-aware context', function () use ($seedProfileAdminPassword, $fetchScenarioUser) {
-    $this->artisan('camr:scenario operations-gateway-recovery')
+test('operations-gateway-recovery smoke validates offline inspection and recovery-oriented operator context', function () use ($seedProfileAdminPassword, $fetchScenarioUser, $scenarioAnchor) {
+    $this->travelTo($scenarioAnchor);
+
+    $this->artisan(sprintf('camr:scenario operations-gateway-recovery --anchor="%s"', $scenarioAnchor->format('Y-m-d H:i:s')))
         ->assertSuccessful()
-        ->expectsOutputToContain('Scenario: operations-gateway-recovery');
+        ->expectsOutputToContain('Scenario: operations-gateway-recovery')
+        ->expectsOutputToContain(sprintf('Anchor: %s', $scenarioAnchor->format('Y-m-d H:i:s')));
 
     $opsAdmin = $fetchScenarioUser('ops_admin_demo');
 
@@ -112,20 +118,26 @@ test('operations-gateway-recovery smoke validates seeded recovery-aware context'
         ->assertRedirect('/site')
         ->assertSessionHas('loginID', $opsAdmin->id);
 
-    $siteId = Site::query()->value('site_id');
+    $offlineCutoff = $scenarioAnchor->subMinutes(120)->toDateTimeString();
+    $offlineGateway = Gateway::query()
+        ->where(function ($query) use ($offlineCutoff): void {
+            $query->whereNull('last_log_update')
+                ->orWhere('last_log_update', '<', $offlineCutoff);
+        })
+        ->orderBy('gateway_sn')
+        ->first();
 
-    expect($siteId)->not->toBeNull();
+    expect($offlineGateway)->not->toBeNull();
 
-    $gatewayPayload = $this->withSession(['loginID' => $opsAdmin['id']])
-        ->getJson(sprintf('/getGateway?siteID=%d', (int) $siteId))
+    $gatewayPayload = $this->withSession(['loginID' => $opsAdmin->id])
+        ->postJson('/gateway_info', ['gatewayID' => $offlineGateway->rtu_id])
         ->assertOk()
         ->json();
 
-    expect($gatewayPayload['recordsTotal'])->toBeGreaterThan(0);
-    expect($gatewayPayload['recordsFiltered'])->toBeGreaterThan(0);
-    expect($gatewayPayload['data'])->toBeArray()->not->toBeEmpty();
+    expect($gatewayPayload['gateway_sn'])->toBe($offlineGateway->gateway_sn);
+    expect((string) $gatewayPayload['gateway_mac'])->toBe((string) $offlineGateway->gateway_mac);
 
-    $this->withSession(['loginID' => $opsAdmin->id])
+    $gatewayPage = $this->withSession(['loginID' => $opsAdmin->id])
         ->get('/gateway')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
@@ -134,14 +146,20 @@ test('operations-gateway-recovery smoke validates seeded recovery-aware context'
             ->has('gateways')
         );
 
+    $gatewayPageGatewaySerials = collect($gatewayPage->inertiaProps('gateways'))
+        ->pluck('gateway_sn')
+        ->filter()
+        ->values();
+
+    expect($gatewayPageGatewaySerials)->toContain($offlineGateway->gateway_sn);
+
     $latestTelemetryTimestamp = MeterData::query()->max('datetime');
     $latestTelemetryMeter = MeterData::query()->orderByDesc('datetime')->value('meter_id');
-    $latestGatewaySoftRev = Gateway::query()->where('soft_rev', '2.12')->exists();
 
     expect($latestTelemetryTimestamp)->not->toBeNull();
     expect($latestTelemetryMeter)->not->toBeNull();
 
-    $this->actingAs($opsAdmin)
+    $dashboardResponse = $this->actingAs($opsAdmin)
         ->get(route('dashboard'))
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
@@ -154,8 +172,23 @@ test('operations-gateway-recovery smoke validates seeded recovery-aware context'
             ->where('telemetrySummary.recentTelemetry.0.status', 'online')
         );
 
+    $gatewayHealth = collect($dashboardResponse->inertiaProps('gatewayHealth'));
+    $telemetryTimeline = collect($dashboardResponse->inertiaProps('telemetryTimeline'));
+    $operationalCommandBar = $dashboardResponse->inertiaProps('operationalCommandBar');
+    $onlineGateway = $gatewayHealth->first(fn (array $gateway): bool => $gateway['status'] === 'online');
+
+    expect($dashboardResponse->inertiaProps('gatewaySummary.offline'))->toBeGreaterThan(0);
+    expect($dashboardResponse->inertiaProps('gatewaySummary.online'))->toBeGreaterThan(0);
+    expect($gatewayHealth->contains(fn (array $gateway): bool => $gateway['gatewaySn'] === $offlineGateway->gateway_sn && $gateway['status'] === 'offline'))->toBeTrue();
+    expect($onlineGateway)->not->toBeNull();
+    expect($telemetryTimeline)->not->toBeEmpty();
+    expect($operationalCommandBar)->toBeArray();
+    expect($operationalCommandBar['gatewaySn'])->not->toBe('');
+    expect($gatewayPageGatewaySerials)->toContain($operationalCommandBar['gatewaySn']);
+    expect(collect($operationalCommandBar['commands'])->contains(fn (array $command): bool => $command['enabled'] === true))->toBeTrue();
     expect(MeterData::query()->count())->toBeGreaterThan(0);
-    expect($latestGatewaySoftRev)->toBeTrue();
+
+    $this->travelBack();
 });
 
 test('analyst-report-export smoke validates preview and export workflow on seeded telemetry', function () use ($seedProfileAdminPassword, $fetchScenarioUser) {

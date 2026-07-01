@@ -72,7 +72,7 @@ final class OperatorScenarioRegistry
                 persona: 'Operations Engineer',
                 seedProfile: 'demo',
                 simulatorScenario: 'offline-recovery',
-                simulatorDuration: '10m',
+                simulatorDuration: '30m',
                 simulatorSpeed: 'real',
                 deterministicAnchor: null,
                 startingState: 'Mixed gateway status set contains stale and recovering entities.',

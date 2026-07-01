@@ -76,7 +76,8 @@ final class SimulateTelemetryAction
         }
 
         $gatewayGroups = $this->gatewayGroups($meters->pluck('rtu_idx')->unique()->values());
-        $offlineRecoveryGateways = $gatewayGroups['offline_recovery_gateways'];
+        $persistentOfflineGateways = $gatewayGroups['persistent_offline_gateways'];
+        $recoveryGateways = $gatewayGroups['recovery_gateways'];
         $pendingFlagGateways = $gatewayGroups['pending_flag_gateways'];
 
         $rows = [];
@@ -99,7 +100,8 @@ final class SimulateTelemetryAction
             $this->applyScenarioGatewayState(
                 $step,
                 $steps,
-                $offlineRecoveryGateways,
+                $persistentOfflineGateways,
+                $recoveryGateways,
                 $pendingFlagGateways,
                 $scenario,
                 $dryRun,
@@ -108,7 +110,15 @@ final class SimulateTelemetryAction
             $meterList = $meters->values();
 
             foreach ($meterList as $index => $meter) {
-                if ($this->shouldSkipTelemetry($scenario, $step, $steps, $meter, $offlineRecoveryGateways, $midpointStep)) {
+                if ($this->shouldSkipTelemetry(
+                    $scenario,
+                    $step,
+                    $steps,
+                    $meter,
+                    $persistentOfflineGateways,
+                    $recoveryGateways,
+                    $midpointStep,
+                )) {
                     continue;
                 }
 
@@ -169,58 +179,71 @@ final class SimulateTelemetryAction
         $pendingGatewayCount = max(1, (int) floor(count($gatewayIds) * 0.15));
 
         return [
-            'offline_recovery_gateways' => $gatewayIds->take($offlineGatewayCount)->values()->toArray(),
+            'persistent_offline_gateways' => $gatewayIds->take(min(1, $offlineGatewayCount))->values()->toArray(),
+            'recovery_gateways' => $gatewayIds->slice(min(1, $offlineGatewayCount), max(0, $offlineGatewayCount - 1))->values()->toArray(),
             'pending_flag_gateways' => $gatewayIds->slice($offlineGatewayCount, $pendingGatewayCount)->values()->toArray(),
         ];
     }
 
     /**
-     * @param  array<int, int>  $offlineRecoveryGateways
+     * @param  array<int, int>  $persistentOfflineGateways
+     * @param  array<int, int>  $recoveryGateways
      */
     private function shouldSkipTelemetry(
         string $scenario,
         int $step,
         int $steps,
         Meter $meter,
-        array $offlineRecoveryGateways,
+        array $persistentOfflineGateways,
+        array $recoveryGateways,
         int $midpointStep,
     ): bool {
+        if (in_array((int) $meter->rtu_idx, $persistentOfflineGateways, true)) {
+            return true;
+        }
+
         if ($scenario !== 'offline-recovery') {
             return false;
         }
 
-        if ($step > $midpointStep) {
+        if (! in_array((int) $meter->rtu_idx, $recoveryGateways, true)) {
             return false;
         }
 
-        return in_array((int) $meter->rtu_idx, $offlineRecoveryGateways, true);
+        return $step <= $midpointStep;
     }
 
     private function applyScenarioGatewayState(
         int $step,
         int $steps,
-        array $offlineRecoveryGateways,
+        array $persistentOfflineGateways,
+        array $recoveryGateways,
         array $pendingFlagGateways,
         string $scenario,
         bool $dryRun,
     ): void {
-        if ($dryRun || $offlineRecoveryGateways === [] && $pendingFlagGateways === []) {
+        if ($dryRun || ($persistentOfflineGateways === [] && $recoveryGateways === [] && $pendingFlagGateways === [])) {
             return;
         }
 
         if ($scenario === 'offline-recovery') {
             $now = CarbonImmutable::now()->toDateTimeString();
-            $staleOffsetMinutes = max(1, $steps * 2) * 15;
+            $staleOffsetMinutes = max(180, max(1, $steps * 2) * 15);
+            $offlineScenarioGateways = array_values(array_unique([
+                ...$persistentOfflineGateways,
+                ...$recoveryGateways,
+            ]));
+
             Gateway::query()
-                ->whereIn('rtu_id', $offlineRecoveryGateways)
+                ->whereIn('rtu_id', $offlineScenarioGateways)
                 ->update([
                     'last_log_update' => CarbonImmutable::now()->subMinutes($staleOffsetMinutes)->toDateTimeString(),
                     'soft_rev' => '2.09',
                 ]);
 
-            if ($step === $steps) {
+            if ($step === $steps && $recoveryGateways !== []) {
                 Gateway::query()
-                    ->whereIn('rtu_id', $offlineRecoveryGateways)
+                    ->whereIn('rtu_id', $recoveryGateways)
                     ->update([
                         'last_log_update' => $now,
                         'soft_rev' => '2.12',
