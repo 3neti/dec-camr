@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { RouteDefinition } from '@/wayfinder';
 import EmptyState from './EmptyState.vue';
+import ScopePill from './ScopePill.vue';
 import StatusChip from './StatusChip.vue';
 
 type TelemetryStatus = 'online' | 'stale' | 'offline';
@@ -136,9 +137,11 @@ function formatTimestamp(value: string): string {
                             </p>
                             <p class="text-sm leading-6 text-muted-foreground">
                                 {{ formatTimestamp(item.receivedAt) }}
-                                <span v-if="item.siteCode"> • {{ item.siteCode }}</span>
                                 <span v-if="item.locationId"> • Location {{ item.locationId }}</span>
                             </p>
+                            <div v-if="item.siteCode" class="flex flex-wrap items-center gap-2">
+                                <ScopePill label="Site" :value="item.siteCode" tone="info" />
+                            </div>
                         </div>
                     </div>
 

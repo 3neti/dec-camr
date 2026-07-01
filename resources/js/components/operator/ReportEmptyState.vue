@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import EmptyState from '@/components/operator/EmptyState.vue';
+import ScopePill from '@/components/operator/ScopePill.vue';
 
 type EmptyAction = {
     id: string;
@@ -27,8 +28,8 @@ const props = defineProps<{
                 <dt class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     Current scope
                 </dt>
-                <dd class="mt-2 text-sm font-semibold leading-6 text-foreground">
-                    {{ props.scopeLabel }}
+                <dd class="mt-3">
+                    <ScopePill label="Scope" :value="props.scopeLabel" tone="info" />
                 </dd>
             </div>
 

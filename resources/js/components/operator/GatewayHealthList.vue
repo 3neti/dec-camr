@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { RouteDefinition } from '@/wayfinder';
 import EmptyState from './EmptyState.vue';
 import FilterBar from './FilterBar.vue';
+import ScopePill from './ScopePill.vue';
 import StatusChip from './StatusChip.vue';
 
 type GatewayStatus = 'online' | 'stale' | 'offline';
@@ -225,10 +226,12 @@ function pluralize(value: number): string {
                                 </span>
                             </p>
                             <p class="text-sm leading-6 text-muted-foreground">
-                                {{ item.siteCode ?? 'No site code' }}
-                                <span> • {{ item.activeMeterCount }} active meter{{ pluralize(item.activeMeterCount) }}</span>
+                                <span>{{ item.activeMeterCount }} active meter{{ pluralize(item.activeMeterCount) }}</span>
                                 <span> • {{ item.meterCount }} total meter{{ pluralize(item.meterCount) }}</span>
                             </p>
+                            <div v-if="item.siteCode" class="flex flex-wrap items-center gap-2">
+                                <ScopePill label="Site" :value="item.siteCode" tone="info" />
+                            </div>
                             <p class="text-sm leading-6 text-muted-foreground">
                                 {{ formatTimestamp(item.lastLogUpdate) }}
                                 <span v-if="item.softRev"> • Soft rev {{ item.softRev }}</span>

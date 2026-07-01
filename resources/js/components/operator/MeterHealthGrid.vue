@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { RouteDefinition } from '@/wayfinder';
 import EmptyState from './EmptyState.vue';
 import FilterBar from './FilterBar.vue';
+import ScopePill from './ScopePill.vue';
 import StatusChip from './StatusChip.vue';
 
 type MeterStatus = 'online' | 'stale' | 'offline';
@@ -231,9 +232,11 @@ function formatRelativeAge(value: string | null | undefined): string {
                         </p>
                         <p class="text-sm leading-6 text-muted-foreground">
                             Meter {{ item.meterId }}
-                            <span v-if="item.siteCode"> • {{ item.siteCode }}</span>
                             <span v-if="item.locationId"> • Location {{ item.locationId }}</span>
                         </p>
+                        <div v-if="item.siteCode" class="flex flex-wrap items-center gap-2">
+                            <ScopePill label="Site" :value="item.siteCode" tone="info" />
+                        </div>
                         <p class="text-sm leading-6 text-muted-foreground">
                             Last reading {{ formatTimestamp(item.lastLogUpdate) }}
                         </p>

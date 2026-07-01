@@ -21,6 +21,7 @@ import OperatorPage from '@/components/operator/OperatorPage.vue';
 import PendingUpdatePanel from '@/components/operator/PendingUpdatePanel.vue';
 import QuickActionGrid from '@/components/operator/QuickActionGrid.vue';
 import RecentTelemetryList from '@/components/operator/RecentTelemetryList.vue';
+import ScopePill from '@/components/operator/ScopePill.vue';
 import StatusChip from '@/components/operator/StatusChip.vue';
 import TelemetryTimeline from '@/components/operator/TelemetryTimeline.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -229,6 +230,7 @@ const meterTone = computed(() => {
 });
 
 const pendingUpdateTone = computed(() => (props.pendingUpdateSummary.total > 0 ? 'warning' : 'success'));
+const accessTone = computed(() => (props.context.user.access.trim().toUpperCase() === 'ALL' ? 'success' : 'warning'));
 
 const reportEntries = computed(() => [
     {
@@ -579,7 +581,7 @@ defineOptions({
                 <div class="space-y-3">
                     <div class="flex flex-wrap items-center gap-2">
                         <StatusChip :label="props.context.user.role" tone="neutral" />
-                        <StatusChip :label="props.context.user.access" tone="neutral" />
+                        <ScopePill label="Access" :value="props.context.user.access" :tone="accessTone" />
                     </div>
 
                     <div class="space-y-2">
