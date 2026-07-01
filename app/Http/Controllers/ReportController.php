@@ -1074,6 +1074,7 @@ final class ReportController extends Controller
      *     rangeMode: string,
      *     emptyTitle: string,
      *     emptyDescription: string,
+     *     nextActionKeys: array<int, string>,
      *     notes: array<int, string>
      * }
      */
@@ -1090,6 +1091,10 @@ final class ReportController extends Controller
                 'rangeMode' => 'date',
                 'emptyTitle' => 'Choose an authorized site and date range',
                 'emptyDescription' => 'SAP preview remains empty until the legacy site scope and date-only range are submitted.',
+                'nextActionKeys' => [
+                    'adjust-filters',
+                    'open-operator-console',
+                ],
                 'notes' => [
                     'SAP preview and export keep the same legacy route contract.',
                     'Date boundaries remain explicit and unchanged.',
@@ -1105,6 +1110,11 @@ final class ReportController extends Controller
                 'rangeMode' => 'datetime',
                 'emptyTitle' => 'Select a site, meter, and full date-time range',
                 'emptyDescription' => 'Raw Data preview stays empty until the required legacy fields are provided.',
+                'nextActionKeys' => [
+                    'adjust-filters',
+                    'open-operator-console',
+                    'review-meters',
+                ],
                 'notes' => [
                     'Raw Data uses the existing meter identifier and timestamp boundaries.',
                     'Export filenames and content types remain unchanged.',
@@ -1120,6 +1130,11 @@ final class ReportController extends Controller
                 'rangeMode' => 'none',
                 'emptyTitle' => 'Select an authorized site for building inventory output',
                 'emptyDescription' => 'Building preview remains empty until the site-level inventory routes are submitted.',
+                'nextActionKeys' => [
+                    'adjust-filters',
+                    'open-operator-console',
+                    'review-gateways',
+                ],
                 'notes' => [
                     'Site report and Site As-Built exports share the same legacy scope.',
                     'Offline gateway and meter workbooks stay on their existing recovery helpers.',
@@ -1135,6 +1150,11 @@ final class ReportController extends Controller
                 'rangeMode' => 'datetime',
                 'emptyTitle' => 'Select a site, meter, and date-time window',
                 'emptyDescription' => 'Consumption preview stays empty until the required legacy scope and range are provided.',
+                'nextActionKeys' => [
+                    'adjust-filters',
+                    'open-operator-console',
+                    'review-meters',
+                ],
                 'notes' => [
                     'Hourly and daily actions reuse the same legacy field names.',
                     'Export continues to use the existing workbook route.',
@@ -1150,6 +1170,11 @@ final class ReportController extends Controller
                 'rangeMode' => 'datetime',
                 'emptyTitle' => 'Select a site, meter, and date-time window',
                 'emptyDescription' => 'Demand preview remains empty until the required legacy scope and time boundaries are submitted.',
+                'nextActionKeys' => [
+                    'adjust-filters',
+                    'open-operator-console',
+                    'review-meters',
+                ],
                 'notes' => [
                     'Hourly and 15-minute demand actions share the same legacy filter contract.',
                     'Demand export continues to use the existing workbook route.',

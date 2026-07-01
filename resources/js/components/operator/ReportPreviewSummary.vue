@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import EmptyState from '@/components/operator/EmptyState.vue';
+import ReportEmptyState from '@/components/operator/ReportEmptyState.vue';
 import StatusChip from '@/components/operator/StatusChip.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type SummaryMetric = {
     label: string;
     value: string;
+};
+
+type EmptyAction = {
+    id: string;
+    label: string;
+    description: string;
+    href: string;
 };
 
 const props = defineProps<{
@@ -15,6 +22,9 @@ const props = defineProps<{
     metrics: SummaryMetric[];
     emptyTitle: string;
     emptyDescription: string;
+    scopeLabel: string;
+    rangeLabel: string;
+    nextActions: EmptyAction[];
     notes?: string[];
 }>();
 </script>
@@ -48,7 +58,13 @@ const props = defineProps<{
                 </div>
             </dl>
 
-            <EmptyState :title="props.emptyTitle" :description="props.emptyDescription" />
+            <ReportEmptyState
+                :title="props.emptyTitle"
+                :description="props.emptyDescription"
+                :scope-label="props.scopeLabel"
+                :range-label="props.rangeLabel"
+                :next-actions="props.nextActions"
+            />
 
             <div v-if="props.notes?.length" class="space-y-2">
                 <h3 class="text-sm font-semibold text-foreground">Operator notes</h3>

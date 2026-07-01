@@ -880,6 +880,9 @@ test('demand report page exposes preview summary contract', function () {
             ->where('previewSummary.scopeMode', 'site-meter')
             ->where('previewSummary.rangeMode', 'datetime')
             ->where('previewSummary.emptyTitle', 'Select a site, meter, and date-time window')
+            ->where('previewSummary.nextActionKeys.0', 'adjust-filters')
+            ->where('previewSummary.nextActionKeys.1', 'open-operator-console')
+            ->where('previewSummary.nextActionKeys.2', 'review-meters')
         );
 });
 
@@ -895,6 +898,7 @@ test('site report page exposes inventory preview summary contract', function () 
             ->where('previewSummary.scopeMode', 'site')
             ->where('previewSummary.rangeMode', 'none')
             ->where('previewSummary.emptyTitle', 'Select an authorized site for building inventory output')
+            ->where('previewSummary.nextActionKeys.2', 'review-gateways')
         );
 });
 

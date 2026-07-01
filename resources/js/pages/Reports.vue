@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { usePage, useRemember } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { gateway } from '@/actions/App/Http/Controllers/GatewayController';
+import { meter } from '@/actions/App/Http/Controllers/MeterController';
 import {
     downloadOfflineGateway,
     downloadOfflineMeter,
@@ -13,6 +15,7 @@ import ReportFamilySelector from '@/components/operator/ReportFamilySelector.vue
 import ReportFilterPanel from '@/components/operator/ReportFilterPanel.vue';
 import ReportPreviewSummary from '@/components/operator/ReportPreviewSummary.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { site } from '@/routes';
 
 type ReportType = 'sap' | 'raw' | 'site' | 'consumption' | 'demand';
 
@@ -66,6 +69,7 @@ type ReportPreviewSummaryContract = {
     rangeMode: 'none' | 'date' | 'datetime';
     emptyTitle: string;
     emptyDescription: string;
+    nextActionKeys: string[];
     notes: string[];
 };
 
@@ -177,6 +181,39 @@ const previewMetrics = computed(() => [
     },
 ]);
 
+const previewNextActions = computed(() => {
+    const actionMap = {
+        'adjust-filters': {
+            id: 'adjust-filters',
+            label: 'Adjust filters',
+            description: 'Tighten the current scope or date window before trying the report again.',
+            href: '#report-filter-panel',
+        },
+        'open-operator-console': {
+            id: 'open-operator-console',
+            label: 'Open operator console',
+            description: 'Check current site-level operator context and telemetry freshness before exporting again.',
+            href: site().url,
+        },
+        'review-meters': {
+            id: 'review-meters',
+            label: 'Review meters',
+            description: 'Inspect meter coverage, identifiers, and telemetry freshness for the current report scope.',
+            href: meter().url,
+        },
+        'review-gateways': {
+            id: 'review-gateways',
+            label: 'Review gateways',
+            description: 'Inspect gateway inventory and recovery state for site-level report gaps.',
+            href: gateway().url,
+        },
+    } as const;
+
+    return props.previewSummary.nextActionKeys
+        .map((key) => actionMap[key as keyof typeof actionMap])
+        .filter((action): action is (typeof actionMap)[keyof typeof actionMap] => action !== undefined);
+});
+
 const shelfEntries = computed(() =>
     Array.isArray(rememberedShelfEntries) ? rememberedShelfEntries : rememberedShelfEntries.value,
 );
@@ -224,15 +261,17 @@ const registerDownload = (payload: { filename: string; action: string; fileType:
         <ReportFamilySelector :items="props.reportFamilies" />
 
         <div class="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <ReportFilterPanel
-                :title="props.filterPanel.title"
-                :description="props.filterPanel.description"
-                :sections="props.filterPanel.sections"
-                :actions="props.filterPanel.actions"
-                :csrf-token="csrfToken"
-                @state-change="syncFilterValues"
-                @download-complete="registerDownload"
-            />
+            <div id="report-filter-panel">
+                <ReportFilterPanel
+                    :title="props.filterPanel.title"
+                    :description="props.filterPanel.description"
+                    :sections="props.filterPanel.sections"
+                    :actions="props.filterPanel.actions"
+                    :csrf-token="csrfToken"
+                    @state-change="syncFilterValues"
+                    @download-complete="registerDownload"
+                />
+            </div>
 
             <div class="grid gap-6">
                 <ReportPreviewSummary
@@ -242,6 +281,9 @@ const registerDownload = (payload: { filename: string; action: string; fileType:
                     :metrics="previewMetrics"
                     :empty-title="props.previewSummary.emptyTitle"
                     :empty-description="props.previewSummary.emptyDescription"
+                    :scope-label="previewScopeLabel"
+                    :range-label="previewRangeLabel"
+                    :next-actions="previewNextActions"
                     :notes="props.previewSummary.notes"
                 />
 
