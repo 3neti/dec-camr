@@ -6,6 +6,25 @@ The live operations console should help operators investigate active gateway and
 
 The console should be backed by real telemetry, seeded operational states, and the telemetry simulator.
 
+## Route Decision
+
+Live Operations MVP will extend the existing:
+
+```text
+/dashboard
+```
+
+route.
+
+This decision is intentional:
+
+- `/site` remains the CAMR operator home and primary shell target.
+- `/dashboard` remains the compatibility route and becomes the Live Operations MVP workspace surface.
+- No new `/operations` or `/live-operations` route is introduced during the MVP phase.
+- `/gateway` and `/meter` remain maintenance and inventory surfaces, not the primary live-operations workspace.
+
+This keeps the current dashboard foundation in place and avoids splitting operator attention across two competing operational entry points.
+
 ## Workspace Model
 
 Recommended layout:
@@ -197,4 +216,3 @@ Open report page
 - `CommunicationSummary`
 - `PendingUpdatePanel`
 - `ActivityFeed`
-

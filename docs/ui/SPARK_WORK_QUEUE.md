@@ -22,7 +22,7 @@ This is Spark's small-task implementation backlog for the CAMR operator console.
 | UI-012 | Download Shelf | Add recent download shelf for current session. | Medium | Medium | Export state | Shows latest generated report family, filename, and status. |
 | UI-013 | Report Empty State | Add explicit no-data state. | High | Low | Report preview | Empty windows explain selected scope/range and next actions. |
 | UI-014 | Analyst Report Journey | Add smoke journey for report preview/export. | High | Medium | UI-008 to UI-013 | Analyst can generate and export representative report without workflow drift. |
-| UI-015 | Live Operations Route Decision | Confirm route/page target for live operations workspace. | High | Low | Architect approval if new route | Route decision is documented before UI implementation. |
+| UI-015 | Live Operations Route Decision | Use `/dashboard` as the Live Operations MVP workspace while keeping `/site` as operator home. | High | Low | No new route required for MVP | Decision is documented before UI implementation; `/gateway` and `/meter` remain maintenance drill-down surfaces. |
 | UI-016 | Gateway Health List | Build gateway health list component. | High | Medium | Dashboard status semantics | Lists online/stale/offline/pending update gateways with drill-down. |
 | UI-017 | Meter Health Grid | Build meter health grid/list component. | High | Medium | Meter telemetry data | Shows meter status, latest reading, and context. |
 | UI-018 | Telemetry Timeline | Build event timeline component. | High | Medium | Simulator events or derived state | Shows readings, stale/offline transitions, update flags, and recovery events. |

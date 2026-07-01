@@ -176,6 +176,13 @@ Priority:
 
 - High. This is where CAMR becomes a living operator console.
 
+Route decision:
+
+- Use the existing `/dashboard` route as the Live Operations MVP workspace surface.
+- Keep `/site` as the CAMR operator home and primary shell target.
+- Do not introduce a new `/operations` route during MVP.
+- Keep `/gateway` and `/meter` as maintenance/inventory routes that Live Operations can drill into.
+
 Likely files:
 
 - new or existing live operations page if route approved
