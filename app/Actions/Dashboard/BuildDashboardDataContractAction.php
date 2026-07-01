@@ -22,6 +22,8 @@ class BuildDashboardDataContractAction
 
     private const RECENT_TELEMETRY_LIMIT = 5;
 
+    private const GATEWAY_HEALTH_LIMIT = 6;
+
     /**
      * @return array<string, mixed>
      */
@@ -117,6 +119,90 @@ class BuildDashboardDataContractAction
                 'ssh' => Gateway::query()->where('update_rtu_ssh', 1)->count(),
                 'forceLoadProfile' => Gateway::query()->where('update_rtu_force_lp', 1)->count(),
             ],
+            'gatewayHealth' => collect(DB::table('meter_rtu')
+                ->leftJoin('meter_details', 'meter_rtu.rtu_id', '=', 'meter_details.rtu_idx')
+                ->select([
+                    'meter_rtu.rtu_id',
+                    'meter_rtu.gateway_sn',
+                    'meter_rtu.gateway_mac',
+                    'meter_rtu.gateway_description',
+                    'meter_rtu.site_code',
+                    'meter_rtu.last_log_update',
+                    'meter_rtu.soft_rev',
+                    'meter_rtu.update_rtu',
+                    'meter_rtu.update_rtu_location',
+                    'meter_rtu.update_rtu_ssh',
+                    'meter_rtu.update_rtu_force_lp',
+                    DB::raw('COUNT(meter_details.meter_id) as meter_count'),
+                    DB::raw("SUM(CASE WHEN UPPER(COALESCE(meter_details.meter_status, '')) = 'ACTIVE' THEN 1 ELSE 0 END) as active_meter_count"),
+                ])
+                ->groupBy([
+                    'meter_rtu.rtu_id',
+                    'meter_rtu.gateway_sn',
+                    'meter_rtu.gateway_mac',
+                    'meter_rtu.gateway_description',
+                    'meter_rtu.site_code',
+                    'meter_rtu.last_log_update',
+                    'meter_rtu.soft_rev',
+                    'meter_rtu.update_rtu',
+                    'meter_rtu.update_rtu_location',
+                    'meter_rtu.update_rtu_ssh',
+                    'meter_rtu.update_rtu_force_lp',
+                ])
+                ->get()
+                ->map(function (object $row) use ($onlineCutoff, $offlineCutoff): array {
+                    $lastLogUpdate = $this->parseLegacyTimestamp($row->last_log_update);
+                    $pendingUpdates = $this->pendingUpdateLabels($row);
+                    $status = $lastLogUpdate === null
+                        ? 'offline'
+                        : $this->healthState($lastLogUpdate, $onlineCutoff, $offlineCutoff);
+
+                    return [
+                        'id' => (int) $row->rtu_id,
+                        'gatewaySn' => (string) $row->gateway_sn,
+                        'gatewayMac' => (string) $row->gateway_mac,
+                        'description' => $row->gateway_description !== null ? (string) $row->gateway_description : null,
+                        'siteCode' => $row->site_code !== null ? (string) $row->site_code : null,
+                        'lastLogUpdate' => $lastLogUpdate?->toIso8601String(),
+                        'status' => $status,
+                        'softRev' => $row->soft_rev !== null ? (string) $row->soft_rev : null,
+                        'meterCount' => (int) $row->meter_count,
+                        'activeMeterCount' => (int) $row->active_meter_count,
+                        'pendingUpdates' => $pendingUpdates,
+                        'hasPendingUpdates' => $pendingUpdates !== [],
+                    ];
+                })
+                ->all())
+                ->sort(function (array $left, array $right): int {
+                    $statusComparison = $this->gatewayStatusRank($left['status']) <=> $this->gatewayStatusRank($right['status']);
+
+                    if ($statusComparison !== 0) {
+                        return $statusComparison;
+                    }
+
+                    $pendingComparison = ($left['hasPendingUpdates'] ? 0 : 1) <=> ($right['hasPendingUpdates'] ? 0 : 1);
+
+                    if ($pendingComparison !== 0) {
+                        return $pendingComparison;
+                    }
+
+                    $nullComparison = ($left['lastLogUpdate'] === null ? 0 : 1) <=> ($right['lastLogUpdate'] === null ? 0 : 1);
+
+                    if ($nullComparison !== 0) {
+                        return $nullComparison;
+                    }
+
+                    $timestampComparison = strcmp($left['lastLogUpdate'] ?? '', $right['lastLogUpdate'] ?? '');
+
+                    if ($timestampComparison !== 0) {
+                        return $timestampComparison;
+                    }
+
+                    return strcmp($left['gatewaySn'], $right['gatewaySn']);
+                })
+                ->take(self::GATEWAY_HEALTH_LIMIT)
+                ->values()
+                ->all(),
             'reportReadiness' => [
                 'raw' => [
                     'state' => $this->reportState($reportWindowReadings, $historicTelemetryCount),
@@ -201,5 +287,59 @@ class BuildDashboardDataContractAction
         }
 
         return 'offline';
+    }
+
+    private function parseLegacyTimestamp(mixed $value): ?CarbonImmutable
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $timestamp = trim($value);
+
+        if ($timestamp === '' || $timestamp === '0000-00-00 00:00:00') {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($timestamp);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function pendingUpdateLabels(object $row): array
+    {
+        $labels = [];
+
+        if ((int) ($row->update_rtu ?? 0) === 1) {
+            $labels[] = 'CSV';
+        }
+
+        if ((int) ($row->update_rtu_location ?? 0) === 1) {
+            $labels[] = 'Location';
+        }
+
+        if ((int) ($row->update_rtu_force_lp ?? 0) === 1) {
+            $labels[] = 'Force LP';
+        }
+
+        if ((int) ($row->update_rtu_ssh ?? 0) === 1) {
+            $labels[] = 'SSH';
+        }
+
+        return $labels;
+    }
+
+    private function gatewayStatusRank(string $status): int
+    {
+        return match ($status) {
+            'offline' => 0,
+            'stale' => 1,
+            default => 2,
+        };
     }
 }

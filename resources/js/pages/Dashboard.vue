@@ -13,6 +13,7 @@ import {
 } from '@/actions/App/Http/Controllers/ReportController';
 import { user } from '@/actions/App/Http/Controllers/UserController';
 import AttentionList from '@/components/operator/AttentionList.vue';
+import GatewayHealthList from '@/components/operator/GatewayHealthList.vue';
 import KpiCard from '@/components/operator/KpiCard.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import QuickActionGrid from '@/components/operator/QuickActionGrid.vue';
@@ -68,6 +69,20 @@ type DashboardProps = {
         ssh: number;
         forceLoadProfile: number;
     };
+    gatewayHealth: Array<{
+        id: number;
+        gatewaySn: string;
+        gatewayMac: string;
+        description: string | null;
+        siteCode: string | null;
+        lastLogUpdate: string | null;
+        status: TelemetryStatus;
+        softRev: string | null;
+        meterCount: number;
+        activeMeterCount: number;
+        pendingUpdates: string[];
+        hasPendingUpdates: boolean;
+    }>;
     reportReadiness: {
         raw: {
             state: string;
@@ -288,6 +303,13 @@ const recentTelemetryItems = computed(() =>
     props.telemetrySummary.recentTelemetry.map((item) => ({
         ...item,
         href: meter(),
+    })),
+);
+
+const gatewayHealthItems = computed(() =>
+    props.gatewayHealth.map((item) => ({
+        ...item,
+        href: gateway(),
     })),
 );
 
@@ -602,6 +624,8 @@ defineOptions({
                     :items="recentTelemetryItems"
                     description="Latest readings, freshness, and meter context without loading the full telemetry history."
                 />
+
+                <GatewayHealthList :items="gatewayHealthItems" />
 
                 <Card class="py-5">
                     <CardHeader class="px-5 pb-0">
