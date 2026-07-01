@@ -38,6 +38,8 @@ This is Spark's small-task implementation backlog for the CAMR operator console.
 | UI-028 | Keyboard Flow Audit | Review focus and tab order. | Medium | Medium | Major UI surfaces | Operators can navigate forms, filters, and actions by keyboard. |
 | UI-029 | Accessibility Pass | Add aria labels and semantic improvements. | Medium | Medium | UI-027, UI-028 | Status, commands, errors, and tables are accessible. |
 | UI-030 | Final UI Journey Sweep | Run persona smoke journeys after polish. | High | Medium | All UI slices | Administrator, operations, maintenance, and analyst smoke paths remain green. |
+| UI-031 | Report Telemetry Identifier Reconciliation | Align Phase 0 telemetry simulator meter identifiers with legacy report lookup semantics. | Medium | Low | Phase 0 simulator, reports hardening | `analyst-report-export` no longer needs inline `meter_data` fixtures because seeded/simulated telemetry is directly consumable by legacy report flows. |
+| UI-032 | Operations Journey Model Access Cleanup | Remove residual array-style Eloquent access in operator journey smoke coverage. | Low | Low | UI-021 | Operations journey uses model property access consistently, including `$opsAdmin->id` instead of array access. |
 
 ## Task Sizing Rule
 
@@ -52,4 +54,3 @@ Each completed task should report:
 - routes/field names preserved,
 - tests or checks run,
 - unresolved risks.
-

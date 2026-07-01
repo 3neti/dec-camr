@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Building;
 use App\Models\Gateway;
+use App\Models\Meter;
 use App\Models\MeterData;
 use App\Models\Site;
 use App\Models\User;
@@ -154,4 +156,150 @@ test('operations-gateway-recovery smoke validates seeded recovery-aware context'
 
     expect(MeterData::query()->count())->toBeGreaterThan(0);
     expect($latestGatewaySoftRev)->toBeTrue();
+});
+
+test('analyst-report-export smoke validates preview and export workflow on seeded telemetry', function () use ($seedProfileAdminPassword, $fetchScenarioUser) {
+    $this->artisan('camr:scenario analyst-report-export')
+        ->assertSuccessful()
+        ->expectsOutputToContain('Scenario: analyst-report-export');
+
+    $analyst = $fetchScenarioUser('analyst_demo');
+
+    $loginResponse = $this->post('/login-user', [
+        'user_name' => $analyst->name,
+        'InputPassword' => $seedProfileAdminPassword,
+    ]);
+
+    $loginResponse
+        ->assertRedirect('/site')
+        ->assertSessionHas('loginID', $analyst->id);
+
+    $reportMeter = Meter::query()
+        ->where('meter_status', 'ACTIVE')
+        ->whereIn('site_idx', function ($query) use ($analyst): void {
+            $query->select('site_idx')
+                ->from('user_access_group')
+                ->where('user_idx', (string) $analyst->id);
+        })
+        ->orderBy('meter_id')
+        ->first();
+
+    expect($reportMeter)->not->toBeNull();
+
+    $buildingCode = Building::query()
+        ->where('building_id', $reportMeter->building_idx)
+        ->value('building_code');
+
+    expect($buildingCode)->not->toBeNull();
+
+    $start = CarbonImmutable::create(2026, 7, 1, 8, 0, 0);
+    $end = $start->addHour();
+
+    MeterData::query()->insert([
+        [
+            'location' => (string) $buildingCode,
+            'meter_id' => (string) $reportMeter->meter_name,
+            'datetime' => $start->toDateTimeString(),
+            'vrms_a' => 230,
+            'vrms_b' => 230,
+            'vrms_c' => 230,
+            'irms_a' => 4,
+            'irms_b' => 4,
+            'irms_c' => 4,
+            'freq' => 60,
+            'pf' => 0.95,
+            'watt' => 920,
+            'va' => 980,
+            'var' => 45,
+            'wh_del' => 250,
+            'wh_rec' => 50,
+            'wh_net' => -200,
+            'wh_total' => 1000,
+            'created_at' => $start->toDateTimeString(),
+            'updated_at' => $start->toDateTimeString(),
+        ],
+        [
+            'location' => (string) $buildingCode,
+            'meter_id' => (string) $reportMeter->meter_name,
+            'datetime' => $start->addMinutes(30)->toDateTimeString(),
+            'vrms_a' => 231,
+            'vrms_b' => 230,
+            'vrms_c' => 229,
+            'irms_a' => 4,
+            'irms_b' => 5,
+            'irms_c' => 4,
+            'freq' => 60,
+            'pf' => 0.96,
+            'watt' => 940,
+            'va' => 995,
+            'var' => 48,
+            'wh_del' => 310,
+            'wh_rec' => 60,
+            'wh_net' => -250,
+            'wh_total' => 1120,
+            'created_at' => $start->addMinutes(30)->toDateTimeString(),
+            'updated_at' => $start->addMinutes(30)->toDateTimeString(),
+        ],
+        [
+            'location' => (string) $buildingCode,
+            'meter_id' => (string) $reportMeter->meter_name,
+            'datetime' => $end->toDateTimeString(),
+            'vrms_a' => 232,
+            'vrms_b' => 231,
+            'vrms_c' => 230,
+            'irms_a' => 5,
+            'irms_b' => 5,
+            'irms_c' => 4,
+            'freq' => 60,
+            'pf' => 0.97,
+            'watt' => 965,
+            'va' => 1015,
+            'var' => 50,
+            'wh_del' => 380,
+            'wh_rec' => 75,
+            'wh_net' => -305,
+            'wh_total' => 1260,
+            'created_at' => $end->toDateTimeString(),
+            'updated_at' => $end->toDateTimeString(),
+        ],
+    ]);
+
+    $this->withSession(['loginID' => $analyst->id])
+        ->get('/consumption_report')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('title', 'Consumption Report')
+            ->where('reportType', 'consumption')
+            ->where('previewSummary.title', 'Preview summary')
+            ->where('downloadShelf.title', 'Download shelf')
+        );
+
+    $payload = $this->withSession(['loginID' => $analyst->id])
+        ->postJson('/generate_consumption_report/hourly', [
+            'site_id' => $reportMeter->site_idx,
+            'meter_id' => (string) $reportMeter->meter_name,
+            'start_date' => $start->format('Y-m-d'),
+            'start_time' => $start->format('H:i'),
+            'end_date' => $end->format('Y-m-d'),
+            'end_time' => $end->format('H:i'),
+            'draw' => 301,
+        ])
+        ->assertOk()
+        ->assertJsonPath('draw', 301)
+        ->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+
+    expect($payload->json('recordsFiltered'))->toBeGreaterThan(0);
+    expect($payload->json('data'))->toBeArray()->not->toBeEmpty();
+
+    $this->withSession(['loginID' => $analyst->id])
+        ->get(sprintf(
+            '/download_consumption_report?site_id=%d&meter_id=%s',
+            (int) $reportMeter->site_idx,
+            urlencode((string) $reportMeter->meter_name),
+        ))
+        ->assertOk()
+        ->assertDownload()
+        ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        ->assertHeaderContains('Content-Disposition', '.xlsx');
 });
