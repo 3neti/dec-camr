@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LegacyAuthController;
 use App\Http\Controllers\BuildingController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ConfigurationFileController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DivisionController;
 use App\Http\Controllers\GatewayController;
 use App\Http\Controllers\MeterController;
@@ -42,7 +43,7 @@ Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/force_lp', [RtuProtocolCon
 Route::get('/rtu/index.php/rtu/rtu_check_update/{mac}/reset_force_lp', [RtuProtocolController::class, 'resetForceLoadProfile'])->name('rtu.reset_force_lp');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 });
 
 Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {

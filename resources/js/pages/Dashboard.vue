@@ -2,6 +2,70 @@
 import { Head } from '@inertiajs/vue3';
 import { site } from '@/routes';
 
+defineProps<{
+    context: {
+        user: {
+            id: number;
+            name: string;
+            role: string;
+            access: string;
+        };
+        generatedAt: string;
+    };
+    gatewaySummary: {
+        total: number;
+        online: number;
+        stale: number;
+        offline: number;
+    };
+    meterSummary: {
+        total: number;
+        active: number;
+        online: number;
+        stale: number;
+        offline: number;
+    };
+    telemetrySummary: {
+        recentReadings: number;
+        activeMeters: number;
+        lastReceivedAt: string | null;
+    };
+    pendingUpdateSummary: {
+        total: number;
+        csv: number;
+        location: number;
+        ssh: number;
+        forceLoadProfile: number;
+    };
+    reportReadiness: {
+        raw: {
+            state: string;
+            recentReadings: number;
+            lastReceivedAt: string | null;
+        };
+        consumption: {
+            state: string;
+            recentReadings: number;
+            activeMeters: number;
+        };
+        demand: {
+            state: string;
+            recentReadings: number;
+            activeMeters: number;
+        };
+        sap: {
+            state: string;
+            sitesWithRecentTelemetry: number;
+            recentReadings: number;
+        };
+        site: {
+            state: string;
+            sitesWithRecentTelemetry: number;
+            recentReadings: number;
+        };
+    };
+}>();
+
 defineOptions({
     layout: {
         breadcrumbs: [
