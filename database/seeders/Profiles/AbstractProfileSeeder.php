@@ -265,12 +265,12 @@ abstract class AbstractProfileSeeder
         $endTime = CarbonImmutable::now()->startOfMinute();
         $startTime = $endTime->subMinutes($pointsPerMeter * $intervalMinutes);
 
-        $meterLocationIds = $meters->pluck('location_idx')->unique()->filter()->values();
+        $buildingIds = $meters->pluck('building_idx')->unique()->filter()->values();
         $gatewayIds = $meters->pluck('rtu_idx')->unique()->values();
 
-        $locationCodes = MeterLocation::query()
-            ->whereIn('location_id', $meterLocationIds)
-            ->pluck('location_code', 'location_id');
+        $buildingCodes = Building::query()
+            ->whereIn('building_id', $buildingIds)
+            ->pluck('building_code', 'building_id');
 
         $gatewayMacs = Gateway::query()
             ->whereIn('rtu_id', $gatewayIds)
@@ -294,8 +294,8 @@ abstract class AbstractProfileSeeder
                 $runningWhDel += 15 + (($step + $meterIndex) % 5);
 
                 $meterRows[] = [
-                    'location' => (string) ($locationCodes[$meter->location_idx] ?? 'HOME'),
-                    'meter_id' => (string) $meter->meter_id,
+                    'location' => (string) ($buildingCodes[$meter->building_idx] ?? $meter->site_code ?? 'HOME'),
+                    'meter_id' => (string) $meter->meter_name,
                     'datetime' => $timestamp->toDateTimeString(),
                     'vrms_a' => 227 + (($meterIndex + $step) % 4),
                     'vrms_b' => 225 + (($meterIndex * 2 + $step) % 5),

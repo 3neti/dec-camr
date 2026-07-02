@@ -47,7 +47,10 @@ class BuildDashboardDataContractAction
         $recentReadings = (clone $recentTelemetryBaseQuery)->count();
         $recentActiveMeters = (clone $recentTelemetryBaseQuery)->distinct()->count('meter_id');
         $recentTelemetry = DB::table('meter_data')
-            ->leftJoin('meter_details', 'meter_data.meter_id', '=', 'meter_details.meter_id')
+            ->leftJoin('meter_details', function ($join): void {
+                $join->on('meter_data.meter_id', '=', 'meter_details.meter_id')
+                    ->orOn('meter_data.meter_id', '=', 'meter_details.meter_name');
+            })
             ->select([
                 'meter_data.meter_id',
                 'meter_data.datetime',
@@ -73,7 +76,10 @@ class BuildDashboardDataContractAction
             })
             ->all();
         $recentSitesWithTelemetry = DB::table('meter_data')
-            ->join('meter_details', 'meter_data.meter_id', '=', 'meter_details.meter_id')
+            ->join('meter_details', function ($join): void {
+                $join->on('meter_data.meter_id', '=', 'meter_details.meter_id')
+                    ->orOn('meter_data.meter_id', '=', 'meter_details.meter_name');
+            })
             ->where('meter_data.datetime', '>=', $reportCutoff->toDateTimeString())
             ->distinct()
             ->count('meter_details.site_idx');
@@ -382,7 +388,10 @@ class BuildDashboardDataContractAction
                 ->all(),
             'telemetryTimeline' => collect([
                 ...DB::table('meter_data')
-                    ->leftJoin('meter_details', 'meter_data.meter_id', '=', 'meter_details.meter_id')
+                    ->leftJoin('meter_details', function ($join): void {
+                        $join->on('meter_data.meter_id', '=', 'meter_details.meter_id')
+                            ->orOn('meter_data.meter_id', '=', 'meter_details.meter_name');
+                    })
                     ->leftJoin('meter_rtu', 'meter_details.rtu_idx', '=', 'meter_rtu.rtu_id')
                     ->select([
                         'meter_data.meter_id',

@@ -100,7 +100,7 @@ final class OperatorScenarioRegistry
                 persona: 'Analyst',
                 seedProfile: 'demo',
                 simulatorScenario: 'report-window',
-                simulatorDuration: '20m',
+                simulatorDuration: '65m',
                 simulatorSpeed: 'fast',
                 deterministicAnchor: null,
                 startingState: 'Report-ready telemetry window starts at small cadence.',

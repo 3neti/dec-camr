@@ -1,8 +1,6 @@
 <?php
 
-use App\Models\Building;
 use App\Models\Gateway;
-use App\Models\Meter;
 use App\Models\MeterData;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -208,95 +206,41 @@ test('analyst-report-export smoke validates preview and export workflow on seede
         ->assertRedirect('/site')
         ->assertSessionHas('loginID', $analyst->id);
 
-    $reportMeter = Meter::query()
-        ->where('meter_status', 'ACTIVE')
-        ->whereIn('site_idx', function ($query) use ($analyst): void {
+    $start = CarbonImmutable::create(2026, 7, 1, 7, 0, 0);
+    $end = CarbonImmutable::create(2026, 7, 1, 8, 0, 0);
+
+    $reportMeter = DB::table('meter_details')
+        ->join('meter_building_table', 'meter_details.building_idx', '=', 'meter_building_table.building_id')
+        ->whereRaw('UPPER(meter_details.meter_status) = ?', ['ACTIVE'])
+        ->whereIn('meter_details.site_idx', function ($query) use ($analyst): void {
             $query->select('site_idx')
                 ->from('user_access_group')
                 ->where('user_idx', (string) $analyst->id);
         })
-        ->orderBy('meter_id')
-        ->first();
+        ->whereExists(function ($query) use ($start, $end): void {
+            $query->selectRaw('1')
+                ->from('meter_data')
+                ->whereColumn('meter_data.meter_id', 'meter_details.meter_name')
+                ->whereColumn('meter_data.location', 'meter_building_table.building_code')
+                ->whereBetween('meter_data.datetime', [$start->toDateTimeString(), $end->toDateTimeString()]);
+        })
+        ->orderBy('meter_details.meter_id')
+        ->first([
+            'meter_details.meter_id',
+            'meter_details.meter_name',
+            'meter_details.site_idx',
+            'meter_building_table.building_code',
+        ]);
 
     expect($reportMeter)->not->toBeNull();
 
-    $buildingCode = Building::query()
-        ->where('building_id', $reportMeter->building_idx)
-        ->value('building_code');
+    $buildingCode = (string) $reportMeter->building_code;
 
-    expect($buildingCode)->not->toBeNull();
-
-    $start = CarbonImmutable::create(2026, 7, 1, 8, 0, 0);
-    $end = $start->addHour();
-
-    MeterData::query()->insert([
-        [
-            'location' => (string) $buildingCode,
-            'meter_id' => (string) $reportMeter->meter_name,
-            'datetime' => $start->toDateTimeString(),
-            'vrms_a' => 230,
-            'vrms_b' => 230,
-            'vrms_c' => 230,
-            'irms_a' => 4,
-            'irms_b' => 4,
-            'irms_c' => 4,
-            'freq' => 60,
-            'pf' => 0.95,
-            'watt' => 920,
-            'va' => 980,
-            'var' => 45,
-            'wh_del' => 250,
-            'wh_rec' => 50,
-            'wh_net' => -200,
-            'wh_total' => 1000,
-            'created_at' => $start->toDateTimeString(),
-            'updated_at' => $start->toDateTimeString(),
-        ],
-        [
-            'location' => (string) $buildingCode,
-            'meter_id' => (string) $reportMeter->meter_name,
-            'datetime' => $start->addMinutes(30)->toDateTimeString(),
-            'vrms_a' => 231,
-            'vrms_b' => 230,
-            'vrms_c' => 229,
-            'irms_a' => 4,
-            'irms_b' => 5,
-            'irms_c' => 4,
-            'freq' => 60,
-            'pf' => 0.96,
-            'watt' => 940,
-            'va' => 995,
-            'var' => 48,
-            'wh_del' => 310,
-            'wh_rec' => 60,
-            'wh_net' => -250,
-            'wh_total' => 1120,
-            'created_at' => $start->addMinutes(30)->toDateTimeString(),
-            'updated_at' => $start->addMinutes(30)->toDateTimeString(),
-        ],
-        [
-            'location' => (string) $buildingCode,
-            'meter_id' => (string) $reportMeter->meter_name,
-            'datetime' => $end->toDateTimeString(),
-            'vrms_a' => 232,
-            'vrms_b' => 231,
-            'vrms_c' => 230,
-            'irms_a' => 5,
-            'irms_b' => 5,
-            'irms_c' => 4,
-            'freq' => 60,
-            'pf' => 0.97,
-            'watt' => 965,
-            'va' => 1015,
-            'var' => 50,
-            'wh_del' => 380,
-            'wh_rec' => 75,
-            'wh_net' => -305,
-            'wh_total' => 1260,
-            'created_at' => $end->toDateTimeString(),
-            'updated_at' => $end->toDateTimeString(),
-        ],
-    ]);
+    expect(MeterData::query()
+        ->where('location', (string) $buildingCode)
+        ->where('meter_id', (string) $reportMeter->meter_name)
+        ->whereBetween('datetime', [$start->toDateTimeString(), $end->toDateTimeString()])
+        ->count())->toBeGreaterThan(0);
 
     $this->withSession(['loginID' => $analyst->id])
         ->get('/consumption_report')

@@ -75,6 +75,16 @@ final class SimulateTelemetryAction
             $steps = max(1, (int) ($durationMinutes / $stepMinutes));
         }
 
+        $gatewayMacs = Gateway::query()
+            ->whereIn('rtu_id', $meters->pluck('rtu_idx')->unique()->values())
+            ->pluck('gateway_mac', 'rtu_id')
+            ->all();
+        $buildingCodes = Site::query()
+            ->join('meter_building_table', 'meter_site.building_idx', '=', 'meter_building_table.building_id')
+            ->whereIn('meter_site.site_id', $meters->pluck('site_idx')->unique()->values())
+            ->pluck('meter_building_table.building_code', 'meter_site.site_id')
+            ->all();
+
         $gatewayGroups = $this->gatewayGroups($meters->pluck('rtu_idx')->unique()->values());
         $persistentOfflineGateways = $gatewayGroups['persistent_offline_gateways'];
         $recoveryGateways = $gatewayGroups['recovery_gateways'];
@@ -122,7 +132,7 @@ final class SimulateTelemetryAction
                     continue;
                 }
 
-                $rows[] = $this->telemetryRow($meter, $index, $step, $timestamp);
+                $rows[] = $this->telemetryRow($meter, $index, $step, $timestamp, $buildingCodes, $gatewayMacs);
                 $updatedMeterIds[] = (int) $meter->meter_id;
                 $updatedGatewayIds[] = (int) $meter->rtu_idx;
                 $updatedSiteIds[] = (int) $meter->site_idx;
@@ -366,13 +376,24 @@ final class SimulateTelemetryAction
             ]);
     }
 
-    private function telemetryRow(Meter $meter, int $index, int $step, CarbonImmutable $timestamp): array
-    {
+    /**
+     * @param  array<int, string>  $buildingCodes
+     * @param  array<int, string>  $gatewayMacs
+     * @return array<string, int|float|string|CarbonImmutable>
+     */
+    private function telemetryRow(
+        Meter $meter,
+        int $index,
+        int $step,
+        CarbonImmutable $timestamp,
+        array $buildingCodes,
+        array $gatewayMacs,
+    ): array {
         $baseOffset = (($meter->meter_id % 97) + ($step * 11) + $index) % 100;
 
         return [
-            'location' => (string) $meter->location_idx,
-            'meter_id' => (string) $meter->meter_id,
+            'location' => (string) ($buildingCodes[$meter->site_idx] ?? $meter->site_code),
+            'meter_id' => (string) $meter->meter_name,
             'datetime' => $timestamp->toDateTimeString(),
             'vrms_a' => 220 + ($baseOffset % 16),
             'vrms_b' => 219 + (($baseOffset + 2) % 15),
@@ -408,9 +429,7 @@ final class SimulateTelemetryAction
             'i_ph_angle_a' => 0.6 + (($baseOffset + $step) % 9) * 0.02,
             'i_ph_angle_b' => 0.8 + (($baseOffset + $step) % 9) * 0.02,
             'i_ph_angle_c' => 1.0 + (($baseOffset + $step) % 9) * 0.02,
-            'mac_addr' => (string) Gateway::query()
-                ->where('rtu_id', (int) $meter->rtu_idx)
-                ->value('gateway_mac'),
+            'mac_addr' => (string) ($gatewayMacs[$meter->rtu_idx] ?? ''),
             'soft_rev' => ($step % 2 === 0) ? '2.12' : '2.10',
             'relay_status' => ($step % 3 === 0) ? 1 : 0,
             'dt' => $timestamp,
