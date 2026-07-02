@@ -66,7 +66,9 @@ test('legacy company create validates required name and persists on success', fu
     $admin = User::factory()->create();
 
     $this->withSession(['loginID' => $admin->id])
+        ->from('/company')
         ->post('/create_company_post', ['company_name' => ''])
+        ->assertRedirect('/company')
         ->assertSessionHasErrors(['company_name' => 'Company Name is Required']);
 
     $this->withSession(['loginID' => $admin->id])
