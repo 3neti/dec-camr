@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
+import EntityTable from '@/components/operator/EntityTable.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 
 type UserRow = {
@@ -19,11 +20,37 @@ const props = defineProps<{
 
 const page = usePage();
 const csrfToken = page.props.csrfToken as string;
+
+const columns = [
+    {
+        key: 'user_real_name',
+        label: 'Real Name',
+    },
+    {
+        key: 'user_name',
+        label: 'Username',
+    },
+    {
+        key: 'user_email_address',
+        label: 'Email',
+        render: (value: unknown) => String(value ?? '-'),
+    },
+    {
+        key: 'user_type',
+        label: 'Type',
+        render: (value: unknown) => String(value ?? '-'),
+    },
+    {
+        key: 'user_access',
+        label: 'Scope',
+        render: (value: unknown) => String(value ?? '-'),
+    },
+];
 </script>
 
 <template>
     <OperatorPage :title="title">
-        <form class="flex flex-wrap gap-3" method="POST" action="/create_user_post">
+        <form class="grid gap-4 rounded-xl border bg-card p-5 shadow-sm sm:grid-cols-2 xl:grid-cols-4" method="POST" action="/create_user_post">
             <input type="hidden" name="_token" :value="csrfToken" />
 
             <label class="flex flex-col gap-1">
@@ -58,30 +85,19 @@ const csrfToken = page.props.csrfToken as string;
 
             <input type="hidden" name="user_access" value="Selected" />
 
-            <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white" type="submit">
-                Create
-            </button>
+            <div class="sm:col-span-2 xl:col-span-4">
+                <button class="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white sm:w-auto" type="submit">
+                    Create
+                </button>
+            </div>
         </form>
 
-        <table class="w-full border-collapse">
-            <thead>
-                <tr>
-                    <th class="border px-3 py-2 text-left">Real Name</th>
-                    <th class="border px-3 py-2 text-left">Username</th>
-                    <th class="border px-3 py-2 text-left">Email</th>
-                    <th class="border px-3 py-2 text-left">Type</th>
-                    <th class="border px-3 py-2 text-left">Scope</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="user in props.users" :key="user.user_id">
-                    <td class="border px-3 py-2">{{ user.user_real_name }}</td>
-                    <td class="border px-3 py-2">{{ user.user_name }}</td>
-                    <td class="border px-3 py-2">{{ user.user_email_address || '-' }}</td>
-                    <td class="border px-3 py-2">{{ user.user_type || '-' }}</td>
-                    <td class="border px-3 py-2">{{ user.user_access || '-' }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <EntityTable
+            title="Existing users"
+            description="Current operator accounts and access scope."
+            :columns="columns"
+            :rows="props.users"
+            row-key="user_id"
+        />
     </OperatorPage>
 </template>

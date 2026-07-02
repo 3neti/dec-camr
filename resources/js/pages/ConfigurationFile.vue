@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
+import EntityTable from '@/components/operator/EntityTable.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 
 type ConfigurationFile = {
@@ -14,12 +15,19 @@ const props = defineProps<{
 
 const page = usePage();
 const csrfToken = page.props.csrfToken as string;
+
+const columns = [
+    {
+        key: 'config_file',
+        label: 'File Name',
+    },
+];
 </script>
 
 <template>
     <OperatorPage :title="title">
         <form
-            class="flex gap-3"
+            class="grid max-w-2xl gap-4 rounded-xl border bg-card p-5 shadow-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
             method="POST"
             action="/create_configuration_file_post"
         >
@@ -35,22 +43,17 @@ const csrfToken = page.props.csrfToken as string;
                 />
             </label>
 
-            <button class="rounded-md bg-black px-4 py-2 text-sm font-medium text-white" type="submit">
+            <button class="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white sm:w-auto" type="submit">
                 Create
             </button>
         </form>
 
-        <table class="w-full border-collapse">
-            <thead>
-                <tr>
-                    <th class="border px-3 py-2 text-left">File Name</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="configurationFile in props.configuration_files" :key="configurationFile.config_id">
-                    <td class="border px-3 py-2">{{ configurationFile.config_file }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <EntityTable
+            title="Existing configuration files"
+            description="Legacy configuration filenames available to gateway and meter workflows."
+            :columns="columns"
+            :rows="props.configuration_files"
+            row-key="config_id"
+        />
     </OperatorPage>
 </template>

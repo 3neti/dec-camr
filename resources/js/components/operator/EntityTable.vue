@@ -188,8 +188,40 @@ const displayValue = (column: EntityColumn, row: EntityRow): string => {
                     :description="hasAnyRows ? 'Adjust the current filters or search terms to broaden the visible records.' : props.emptyMessage"
                 />
             </div>
-            <div v-else class="overflow-x-auto">
-                <table class="w-full border-collapse">
+            <div v-else class="space-y-4">
+                <div class="grid gap-3 md:hidden">
+                    <article
+                        v-for="row in filteredRows"
+                        :key="`mobile-${String(row[props.rowKey])}`"
+                        class="rounded-lg border bg-background p-4 shadow-sm"
+                    >
+                        <dl class="space-y-3">
+                            <div
+                                v-for="column in props.columns"
+                                :key="`${String(row[props.rowKey])}-mobile-${column.key}`"
+                                class="space-y-1"
+                            >
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    {{ column.label }}
+                                </dt>
+                                <dd class="text-sm leading-6 text-foreground break-words">
+                                    {{ displayValue(column, row) }}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        <div v-if="hasRowActions" class="mt-4 border-t pt-4">
+                            <EntityActions
+                                orientation="column"
+                                :actions="props.rowActions?.(row) ?? []"
+                                :csrf-token="props.csrfToken"
+                            />
+                        </div>
+                    </article>
+                </div>
+
+                <div class="hidden overflow-x-auto md:block">
+                    <table class="w-full min-w-[40rem] border-collapse">
                     <thead>
                         <tr>
                             <th v-for="column in props.columns" :key="`${props.title}-${column.key}`" class="border px-3 py-2 text-left">
@@ -218,7 +250,8 @@ const displayValue = (column: EntityColumn, row: EntityRow): string => {
                             </td>
                         </tr>
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
         </CardContent>
     </Card>
