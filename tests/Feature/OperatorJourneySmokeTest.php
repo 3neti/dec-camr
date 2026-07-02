@@ -7,6 +7,7 @@ use App\Models\MeterData;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\Profiles\AbstractProfileSeeder;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 $seedProfileAdminPassword = AbstractProfileSeeder::DEFAULT_PASSWORD;
@@ -335,4 +336,104 @@ test('analyst-report-export smoke validates preview and export workflow on seede
         ->assertDownload()
         ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         ->assertHeaderContains('Content-Disposition', '.xlsx');
+});
+
+test('maintenance-meter-update smoke validates scoped site to gateway to meter workflow', function () use ($seedProfileAdminPassword, $fetchScenarioUser, $scenarioAnchor) {
+    $this->travelTo($scenarioAnchor);
+
+    $this->artisan(sprintf('camr:scenario maintenance-meter-update --anchor="%s"', $scenarioAnchor->format('Y-m-d H:i:s')))
+        ->assertSuccessful()
+        ->expectsOutputToContain('Scenario: maintenance-meter-update')
+        ->expectsOutputToContain(sprintf('Anchor: %s', $scenarioAnchor->format('Y-m-d H:i:s')));
+
+    $maintenanceUser = $fetchScenarioUser('maintenance_demo');
+
+    $loginResponse = $this->post('/login-user', [
+        'user_name' => $maintenanceUser->name,
+        'InputPassword' => $seedProfileAdminPassword,
+    ]);
+
+    $loginResponse
+        ->assertRedirect('/site')
+        ->assertSessionHas('loginID', $maintenanceUser->id);
+
+    $allowedSiteIds = DB::table('user_access_group')
+        ->where('user_idx', (string) $maintenanceUser->id)
+        ->orderBy('site_idx')
+        ->pluck('site_idx')
+        ->map(fn ($siteId): int => (int) $siteId)
+        ->values();
+
+    expect($allowedSiteIds)->not->toBeEmpty();
+
+    $disallowedSiteId = Gateway::query()
+        ->whereNotIn('site_idx', $allowedSiteIds->all())
+        ->orderBy('site_idx')
+        ->value('site_idx');
+
+    expect($disallowedSiteId)->not->toBeNull();
+
+    $sitePage = $this->withSession(['loginID' => $maintenanceUser->id])
+        ->get('/site')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Site')
+            ->where('title', 'Site Management')
+            ->has('sites')
+        );
+
+    expect(collect($sitePage->inertiaProps('sites'))->pluck('site_id')->map(fn ($siteId): int => (int) $siteId)->all())
+        ->toEqualCanonicalizing($allowedSiteIds->all());
+
+    $siteListPayload = $this->withSession(['loginID' => $maintenanceUser->id])
+        ->getJson('/site/list')
+        ->assertOk()
+        ->json();
+
+    expect($siteListPayload['recordsTotal'])->toBe($allowedSiteIds->count());
+    expect(collect($siteListPayload['data'])->pluck('site_id')->contains((int) $disallowedSiteId))->toBeFalse();
+
+    $selectedSiteId = $allowedSiteIds->first();
+
+    $gatewayPage = $this->withSession(['loginID' => $maintenanceUser->id])
+        ->get('/gateway')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Gateway')
+            ->where('title', 'Gateway Management')
+            ->has('gateways')
+        );
+
+    $gatewayPayload = $this->withSession(['loginID' => $maintenanceUser->id])
+        ->getJson('/getGateway?siteID='.$selectedSiteId)
+        ->assertOk()
+        ->json();
+
+    $gatewaySerials = collect($gatewayPayload['data'])->pluck('gateway_sn')->filter()->values();
+
+    expect($gatewayPayload['recordsTotal'])->toBeGreaterThan(0);
+    expect($gatewaySerials)->not->toBeEmpty();
+
+    $meterPage = $this->withSession(['loginID' => $maintenanceUser->id])
+        ->get('/meter')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Meter')
+            ->where('title', 'Meter Management')
+            ->has('meters')
+        );
+
+    $meterPayload = $this->withSession(['loginID' => $maintenanceUser->id])
+        ->getJson('/getMeter?siteID='.$selectedSiteId)
+        ->assertOk()
+        ->json();
+
+    $meterNames = collect($meterPayload['data'])->pluck('meter_name')->filter()->values();
+
+    expect($meterPayload['recordsTotal'])->toBeGreaterThan(0);
+    expect($meterNames)->not->toBeEmpty();
+    expect(collect($gatewayPage->inertiaProps('gateways'))->pluck('gateway_sn')->intersect($gatewaySerials)->isNotEmpty())->toBeTrue();
+    expect(collect($meterPage->inertiaProps('meters'))->pluck('meter_name')->intersect($meterNames)->isNotEmpty())->toBeTrue();
+
+    $this->travelBack();
 });
