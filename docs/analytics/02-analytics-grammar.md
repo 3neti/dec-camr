@@ -4,6 +4,26 @@
 
 This document defines relationships between analytics concepts. It is not a flat glossary. The goal is to establish how analytical ideas connect before designing charts or screens.
 
+Analytics is series-first, not entity-first. CAMR entities such as meters, gateways, buildings, and sites provide context, but analytical meaning comes from a value moving through time with an explicit confidence level.
+
+## Entity To Series Chain
+
+```text
+Entity Context
+↓
+Time Series
+↓
+Metric Value
+↓
+Confidence
+↓
+Comparison
+↓
+Decision
+```
+
+This chain prevents analytics work from collapsing back into maintenance-page thinking. A meter record is operational context. A consumption series for that meter is analytical evidence.
+
 ## Core Chain
 
 ```text
@@ -25,6 +45,8 @@ Forecast
 ```
 
 Each step depends on the trustworthiness and grain of the previous step.
+
+The meter reading is the raw point. The series built from readings gives the analyst a pattern to investigate.
 
 ## Consumption
 
@@ -221,4 +243,3 @@ Forecast depends on:
 - visible uncertainty.
 
 Forecast is a future concept and must not appear as authoritative prediction until accepted.
-

@@ -10,6 +10,50 @@ It answers:
 
 This is documentation only. It does not create analytics services, Vue pages, routes, charts, migrations, report changes, dashboard changes, seed changes, or simulator changes.
 
+## Conceptual Layer: Operational Data To Analytical Data
+
+CAMR already has strong operational data. Operational data is entity-centered and answers:
+
+> What happened?
+
+Examples:
+
+- a gateway posted telemetry,
+- a meter has a latest reading,
+- a building belongs to a site,
+- a report endpoint calculated a workbook row.
+
+Analytics must transform that operational data into analytical data. Analytical data is series-centered and answers:
+
+> What pattern emerges over time?
+
+That distinction matters because the Operator Console is built around entities such as gateways, meters, sites, and buildings. The Analytics Workbench should be built around time series such as consumption, demand, voltage, current, frequency, and power factor. Entities provide context. Series carry analytical meaning.
+
+## Analytical Series
+
+Analytics should not primarily consume CRUD-shaped entities. It should consume analytical series shaped around:
+
+```text
+Time
+↓
+Value
+↓
+Confidence
+↓
+Context
+```
+
+Examples:
+
+- Consumption Series
+- Demand Series
+- Voltage Series
+- Current Series
+- Frequency Series
+- Power Factor Series
+
+This series model should influence every later analytics component. A chart is only the presentation of a series. The contract behind it must preserve timestamp, value, confidence, and context before visualization begins.
+
 ## 1. Canonical Tables
 
 The current Laravel 13 database contains these CAMR-relevant tables:
@@ -677,6 +721,12 @@ Reuse recommendation:
 
 ## 6. Data Quality / Trust
 
+Data trust is a first-class analytics concept.
+
+The Operator Console can often show a current operational state without explaining every uncertainty. Analytics cannot. Analytics supports historical, engineering, financial, and executive decisions. If the system hides uncertainty, users may compare incomplete periods, treat calculated values as measured values, or interpret missing intervals as true zero consumption.
+
+Trust should travel with every analytical point and aggregate. Derived values must not masquerade as measurements, and missing intervals must remain visible whenever they affect interpretation.
+
 Measured:
 
 - RTU-posted `meter_data` rows when `save_to_meter_data = 1`.
@@ -711,6 +761,15 @@ Simulated:
 
 - Seed profile telemetry and `camr:simulate` output.
 - Useful for UI and analytics development, but must be marked as demo/development data in any analytics journey.
+
+Confidence propagation rule:
+
+- A raw telemetry point can be `Measured` only when the value was posted by a device and the timestamp is usable.
+- A deterministic result from measured values is `Calculated`, not `Measured`.
+- A calculated series point should inherit the weakest confidence level of the readings used to produce it.
+- A series point is `Incomplete` when expected boundary readings or intervals are missing, even if a numeric value can still be calculated.
+- `Estimated` must be explicitly approved before use and must be visually distinguishable from measured or calculated values.
+- `Unknown` should block precise claims until the ambiguity is resolved or accepted.
 
 ## 7. Gaps
 
@@ -757,13 +816,13 @@ Scope gaps:
 
 ## 8. Recommended Data Contracts
 
-Recommended first contracts for AN-002 and follow-up work:
+Recommended contracts should be introduced progressively. The first implementation slice should not attempt to define the whole Analytics data layer at once.
 
-### `AnalyticsTelemetryPoint`
+### `TelemetryPoint`
 
 Purpose:
 
-- Normalized point for raw telemetry display and downstream series.
+- Smallest normalized point for raw telemetry and downstream series.
 
 Fields:
 
@@ -777,6 +836,10 @@ Fields:
 - measurements,
 - confidence,
 - source lineage.
+
+Implementation note:
+
+- This should be the next contract because every later consumption, demand, power-quality, and profile series depends on a trustworthy point shape.
 
 ### `ConsumptionSeriesPoint`
 
@@ -833,21 +896,6 @@ Fields:
 - comparison value,
 - confidence.
 
-### `MeterProfilePoint`
-
-Purpose:
-
-- Load profile and meter-level investigation.
-
-Fields:
-
-- meter ID/name,
-- timestamp,
-- consumption or demand value,
-- voltage/current/power factor fields where selected,
-- confidence,
-- missing-data flag.
-
 ### `DataTrustIndicator`
 
 Purpose:
@@ -862,18 +910,30 @@ Fields:
 - source,
 - warning message.
 
+### Later Contracts
+
+Later contracts may include:
+
+- `MeterProfilePoint`
+- `PowerQualitySeriesPoint`
+- `AvailabilitySeriesPoint`
+- `ComparisonSummary`
+- `ForecastSeriesPoint`
+
+These should wait until the first series contracts prove the shape and confidence model.
+
 ## 9. Recommended Next Work Item
 
 Proceed to:
 
 ```text
-AN-002 — Analytics Data Contract
+AN-002 — TelemetryPoint Contract
 ```
 
-No additional discovery step is required before AN-002, but AN-002 should stay narrow:
+No additional discovery step is required before AN-002, but AN-002 should stay smaller than the original generic "Analytics Data Contract" idea:
 
-- define the first analytics contract around consumption telemetry,
+- define the smallest canonical telemetry point,
 - normalize meter/building/site identifiers,
-- include confidence and missing-data summary,
-- reuse report semantics without moving or changing report formulas yet.
-
+- preserve source timestamp and lineage,
+- include confidence and ambiguity markers,
+- avoid consumption or demand calculations until the point contract is accepted.

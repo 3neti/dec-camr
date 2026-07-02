@@ -15,6 +15,8 @@ Grammar
 ↓
 Data Foundation
 ↓
+Series Model
+↓
 Journeys
 ↓
 Design Language
@@ -73,6 +75,31 @@ Analytics is data-driven. The data foundation must define:
 - confidence.
 
 No analytics visualization should be implemented before its data contract is accepted.
+
+## Series Model Before Charts
+
+Analytics should be designed around series, not CRUD entities.
+
+Series shape:
+
+```text
+Time
+↓
+Value
+↓
+Confidence
+↓
+Context
+```
+
+Entities such as meters, gateways, buildings, and sites are context. They help select, label, scope, and explain analytical data. They are not the analytical product by themselves.
+
+This rule creates several implementation consequences:
+
+- define a canonical `TelemetryPoint` before consumption or demand series,
+- define consumption and demand series before trend charts,
+- attach confidence and lineage before comparisons,
+- preserve aggregation lineage so users can understand how a value was produced.
 
 ## Journeys Before Screens
 
@@ -144,5 +171,4 @@ Future platforms:
 
 Do not start with charts.
 
-Start with the decision the user needs to make, the data needed to support it, and the confidence required to trust it.
-
+Start with the decision the user needs to make, the series needed to support it, the data lineage behind that series, and the confidence required to trust it.

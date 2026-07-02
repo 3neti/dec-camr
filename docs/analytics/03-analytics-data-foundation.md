@@ -4,6 +4,36 @@
 
 The Operator Console is interaction-driven. Analytics is data-driven. Before CAMR designs analytics screens, it must define which data is trusted, how it is aggregated, and how uncertainty is shown.
 
+## Operational Data To Analytical Data
+
+Operational data answers:
+
+> What happened?
+
+Analytical data answers:
+
+> What pattern emerges over time?
+
+The Operator Console can remain entity-centered because operators need current gateway, meter, site, and building state. The Analytics Workbench should be series-centered because analysts need historical evidence.
+
+Series shape:
+
+```text
+Time
+↓
+Value
+↓
+Confidence
+↓
+Context
+```
+
+Data-foundation rule:
+
+- Define the canonical point before defining series.
+- Define series contracts before building charts.
+- Define confidence behavior before presenting comparisons.
+
 ## Canonical Data Sources
 
 Primary sources:
@@ -114,6 +144,7 @@ Measured
 Calculated
 Estimated
 Incomplete
+Unknown
 ```
 
 Measured:
@@ -132,16 +163,36 @@ Incomplete:
 
 - Value affected by missing or insufficient data.
 
+Unknown:
+
+- System cannot determine whether a value is measured, defaulted, missing, or semantically usable.
+
 Trust rule:
 
 - Operator Console can often show current state without confidence labels.
 - Analytics must show confidence when users make historical, financial, or performance decisions.
+- Derived values must not masquerade as measured values.
+- Confidence should propagate from raw points into series, summaries, comparisons, and exports.
 
 ## Data Contract Requirement
 
-Before any Analytics workspace is implemented, create an Analytics Data Contract slice.
+Before any Analytics workspace is implemented, create progressively small analytics data contract slices.
 
-That slice must define:
+Recommended sequence:
+
+```text
+TelemetryPoint
+↓
+ConsumptionSeriesPoint
+↓
+DemandSeriesPoint
+↓
+BuildingConsumptionSummary
+↓
+DataTrustIndicator
+```
+
+Each contract must define:
 
 - selected entities,
 - selected time range,
@@ -152,4 +203,3 @@ That slice must define:
 - confidence,
 - missing-data summary,
 - source lineage.
-
