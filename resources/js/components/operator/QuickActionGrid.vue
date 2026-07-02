@@ -35,7 +35,7 @@ const props = withDefaults(
                 v-for="item in props.items"
                 :key="item.id"
                 :href="item.href"
-                class="group rounded-xl border bg-background p-4 text-left transition hover:bg-muted"
+                class="group rounded-xl border bg-background p-4 text-left transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
                 <div class="space-y-2">
                     <div class="flex items-center justify-between gap-3">

@@ -28,8 +28,8 @@ const props = withDefaults(
 
 const buttonClass = (tone: EntityAction['tone'] = 'neutral'): string =>
     tone === 'danger'
-        ? 'inline-flex items-center rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 dark:border-red-900/80 dark:text-red-200 dark:hover:bg-red-950/60'
-        : 'inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted';
+        ? 'inline-flex items-center rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-red-900/80 dark:text-red-200 dark:hover:bg-red-950/60'
+        : 'inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 const shouldSubmit = (message?: string): boolean => {
     if (! message) {
@@ -47,6 +47,7 @@ const shouldSubmit = (message?: string): boolean => {
                 ? 'flex flex-col items-start gap-2'
                 : 'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end'
         "
+        role="group"
     >
         <template v-if="props.actions.length > 0">
             <template v-for="action in props.actions" :key="action.id">

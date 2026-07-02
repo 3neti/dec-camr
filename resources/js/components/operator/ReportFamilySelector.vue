@@ -36,7 +36,7 @@ const props = withDefaults(
                 v-for="item in props.items"
                 :key="item.id"
                 :href="item.href"
-                class="group rounded-xl border p-4 text-left transition"
+                class="group rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 :class="
                     item.active
                         ? 'border-emerald-600/60 bg-emerald-600/5 shadow-sm'

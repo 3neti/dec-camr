@@ -161,7 +161,7 @@ function formatRelativeAge(value: string | null | undefined): string {
                     <div class="mt-auto flex flex-wrap gap-2 pt-1">
                         <Link
                             :href="item.reviewHref"
-                            class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                            class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             Review gateway
                         </Link>
@@ -172,7 +172,7 @@ function formatRelativeAge(value: string | null | undefined): string {
                             :href="flag.resetHref"
                             target="_blank"
                             rel="noreferrer"
-                            class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                            class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             Reset {{ flag.label }}
                         </a>

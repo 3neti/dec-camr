@@ -629,7 +629,7 @@ defineOptions({
                 <template #aside>
                     <Link
                         :href="gateway()"
-                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         Open
                     </Link>
@@ -648,7 +648,7 @@ defineOptions({
                 <template #aside>
                     <Link
                         :href="meter()"
-                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         Open
                     </Link>
@@ -667,7 +667,7 @@ defineOptions({
                 <template #aside>
                     <Link
                         :href="rawReport()"
-                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         Review
                     </Link>
@@ -686,7 +686,7 @@ defineOptions({
                 <template #aside>
                     <Link
                         :href="gateway()"
-                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         Review
                     </Link>
@@ -705,7 +705,7 @@ defineOptions({
                 <template #aside>
                     <Link
                         :href="demandReport()"
-                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         Open
                     </Link>
@@ -724,7 +724,7 @@ defineOptions({
                 <template #aside>
                     <Link
                         :href="site()"
-                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                        class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         Home
                     </Link>

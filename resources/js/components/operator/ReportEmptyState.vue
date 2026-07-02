@@ -51,7 +51,7 @@ const props = defineProps<{
                     <a
                         v-if="action.href.startsWith('#')"
                         :href="action.href"
-                        class="rounded-xl border bg-background p-4 text-left transition hover:bg-muted"
+                        class="rounded-xl border bg-background p-4 text-left transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         <p class="text-sm font-semibold text-foreground">
                             {{ action.label }}
@@ -64,7 +64,7 @@ const props = defineProps<{
                     <Link
                         v-else
                         :href="action.href"
-                        class="rounded-xl border bg-background p-4 text-left transition hover:bg-muted"
+                        class="rounded-xl border bg-background p-4 text-left transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         <p class="text-sm font-semibold text-foreground">
                             {{ action.label }}

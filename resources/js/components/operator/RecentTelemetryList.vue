@@ -148,7 +148,7 @@ function formatTimestamp(value: string): string {
                     <div v-if="item.href" class="shrink-0">
                         <Link
                             :href="item.href"
-                            class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                            class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             Open meter
                         </Link>

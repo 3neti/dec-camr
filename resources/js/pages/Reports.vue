@@ -311,7 +311,7 @@ const registerDownload = (payload: { filename: string; action: string; fileType:
                             <input type="hidden" name="_token" :value="csrfToken" />
                             <button
                                 type="submit"
-                                class="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                                class="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             >
                                 {{ settingAction.label }}
                             </button>
@@ -330,7 +330,7 @@ const registerDownload = (payload: { filename: string; action: string; fileType:
                             v-for="offlineAction in offlineActions"
                             :key="offlineAction.href"
                             :href="offlineAction.href"
-                            class="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                            class="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
                             {{ offlineAction.label }}
                         </a>

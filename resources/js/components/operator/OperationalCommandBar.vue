@@ -124,7 +124,7 @@ const statusLabel = {
                                 :href="command.href"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition"
+                                class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 :class="command.enabled ? 'border-border text-foreground hover:bg-muted' : 'cursor-not-allowed border-border/60 text-muted-foreground opacity-60 pointer-events-none'"
                                 :aria-disabled="command.enabled ? 'false' : 'true'"
                             >
