@@ -154,11 +154,11 @@ const download = async (): Promise<void> => {
 
 <template>
     <div class="space-y-2">
-        <button :class="buttonClass" :disabled="state === 'preparing'" type="button" @click="download">
+        <button :class="buttonClass" :disabled="state === 'preparing'" type="button" :aria-busy="state === 'preparing'" @click="download">
             {{ state === 'preparing' ? 'Preparing export...' : props.label }}
         </button>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2" role="status" aria-live="polite">
             <StatusChip :label="stateLabel" :tone="stateTone" />
             <p class="text-xs leading-5 text-muted-foreground">
                 {{ detail }}

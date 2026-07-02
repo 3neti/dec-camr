@@ -630,6 +630,7 @@ defineOptions({
                     <Link
                         :href="gateway()"
                         class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label="Open gateway fleet health details"
                     >
                         Open
                     </Link>
@@ -649,6 +650,7 @@ defineOptions({
                     <Link
                         :href="meter()"
                         class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label="Open meter fleet details"
                     >
                         Open
                     </Link>
@@ -668,6 +670,7 @@ defineOptions({
                     <Link
                         :href="rawReport()"
                         class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label="Review recent telemetry report"
                     >
                         Review
                     </Link>
@@ -687,6 +690,7 @@ defineOptions({
                     <Link
                         :href="gateway()"
                         class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label="Review pending gateway updates"
                     >
                         Review
                     </Link>
@@ -706,6 +710,7 @@ defineOptions({
                     <Link
                         :href="demandReport()"
                         class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label="Open reports readiness details"
                     >
                         Open
                     </Link>
@@ -725,6 +730,7 @@ defineOptions({
                     <Link
                         :href="site()"
                         class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label="Return to operator home"
                     >
                         Home
                     </Link>

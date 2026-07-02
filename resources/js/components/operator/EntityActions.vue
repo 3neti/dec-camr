@@ -18,11 +18,13 @@ const props = withDefaults(
         orientation?: 'row' | 'column';
         actions?: EntityAction[];
         csrfToken?: string;
+        groupLabel?: string;
     }>(),
     {
         orientation: 'row',
         actions: () => [],
         csrfToken: '',
+        groupLabel: 'Record actions',
     },
 );
 
@@ -48,6 +50,7 @@ const shouldSubmit = (message?: string): boolean => {
                 : 'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end'
         "
         role="group"
+        :aria-label="props.groupLabel"
     >
         <template v-if="props.actions.length > 0">
             <template v-for="action in props.actions" :key="action.id">

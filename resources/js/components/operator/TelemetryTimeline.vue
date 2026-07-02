@@ -173,6 +173,7 @@ function formatRelativeAge(value: string | null | undefined): string {
                         <Link
                             :href="item.href"
                             class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            :aria-label="`${actionLabel[item.resource]} ${item.subject}`"
                         >
                             {{ actionLabel[item.resource] }}
                         </Link>

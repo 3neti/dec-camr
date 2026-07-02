@@ -194,7 +194,14 @@ const displayValue = (column: EntityColumn, row: EntityRow): string => {
                         v-for="row in filteredRows"
                         :key="`mobile-${String(row[props.rowKey])}`"
                         class="rounded-lg border bg-background p-4 shadow-sm"
+                        :aria-labelledby="`${props.title}-${String(row[props.rowKey])}-mobile-heading`"
                     >
+                        <h3
+                            :id="`${props.title}-${String(row[props.rowKey])}-mobile-heading`"
+                            class="sr-only"
+                        >
+                            {{ props.title }} record {{ String(row[props.rowKey]) }}
+                        </h3>
                         <dl class="space-y-3">
                             <div
                                 v-for="column in props.columns"
@@ -222,34 +229,42 @@ const displayValue = (column: EntityColumn, row: EntityRow): string => {
 
                 <div class="hidden overflow-x-auto md:block">
                     <table class="w-full min-w-[40rem] border-collapse">
-                    <thead>
-                        <tr>
-                            <th v-for="column in props.columns" :key="`${props.title}-${column.key}`" class="border px-3 py-2 text-left">
-                                {{ column.label }}
-                            </th>
-                            <th v-if="hasRowActions" class="border px-3 py-2 text-right">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="row in filteredRows" :key="String(row[props.rowKey])">
-                            <td
-                                v-for="column in props.columns"
-                                :key="`${String(row[props.rowKey])}-${column.key}`"
-                                :class="column.className ?? 'border px-3 py-2'"
-                            >
-                                {{ displayValue(column, row) }}
-                            </td>
-                            <td v-if="hasRowActions" class="border px-3 py-2 align-top">
-                                <EntityActions
-                                    orientation="row"
-                                    :actions="props.rowActions?.(row) ?? []"
-                                    :csrf-token="props.csrfToken"
-                                />
-                            </td>
-                        </tr>
-                    </tbody>
+                        <caption class="sr-only">
+                            {{ props.title }}. {{ props.description || props.emptyMessage }}
+                        </caption>
+                        <thead>
+                            <tr>
+                                <th
+                                    v-for="column in props.columns"
+                                    :key="`${props.title}-${column.key}`"
+                                    class="border px-3 py-2 text-left"
+                                    scope="col"
+                                >
+                                    {{ column.label }}
+                                </th>
+                                <th v-if="hasRowActions" class="border px-3 py-2 text-right" scope="col">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in filteredRows" :key="String(row[props.rowKey])">
+                                <td
+                                    v-for="column in props.columns"
+                                    :key="`${String(row[props.rowKey])}-${column.key}`"
+                                    :class="column.className ?? 'border px-3 py-2'"
+                                >
+                                    {{ displayValue(column, row) }}
+                                </td>
+                                <td v-if="hasRowActions" class="border px-3 py-2 align-top">
+                                    <EntityActions
+                                        orientation="row"
+                                        :actions="props.rowActions?.(row) ?? []"
+                                        :csrf-token="props.csrfToken"
+                                    />
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>

@@ -17,7 +17,7 @@ const uniqueErrors = computed(() => Array.from(new Set(props.errors.filter((erro
 </script>
 
 <template>
-    <Alert v-if="uniqueErrors.length > 0" variant="destructive">
+    <Alert v-if="uniqueErrors.length > 0" variant="destructive" aria-live="assertive" aria-atomic="true">
         <AlertCircle class="size-4" />
         <AlertTitle>{{ props.title }}</AlertTitle>
         <AlertDescription>
