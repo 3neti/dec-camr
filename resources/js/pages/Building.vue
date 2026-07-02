@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3';
 import EntityForm from '@/components/operator/EntityForm.vue';
 import EntityTable from '@/components/operator/EntityTable.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
+import { DeleteBuildingInfo, building_info } from '@/routes';
 
 type Building = {
     building_id: number;
@@ -68,6 +69,24 @@ const columns = [
         render: (value: unknown) => String(value ?? '-'),
     },
 ];
+
+const rowActions = (building: Building | Row) => [
+    {
+        id: `inspect-building-${building.building_id}`,
+        label: 'Inspect',
+        form: building_info.form(),
+        fields: { buildingID: building.building_id },
+        target: '_blank' as const,
+    },
+    {
+        id: `delete-building-${building.building_id}`,
+        label: 'Delete',
+        tone: 'danger' as const,
+        form: DeleteBuildingInfo.form(),
+        fields: { buildingID: building.building_id },
+        confirm: `Delete building ${building.building_code ?? building.building_id}?`,
+    },
+];
 </script>
 
 <template>
@@ -87,6 +106,8 @@ const columns = [
             :columns="columns"
             :rows="props.buildings"
             row-key="building_id"
+            :row-actions="rowActions"
+            :csrf-token="csrfToken"
         />
     </OperatorPage>
 </template>

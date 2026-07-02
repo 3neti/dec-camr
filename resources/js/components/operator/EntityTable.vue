@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import type { RouteDefinition, RouteFormDefinition } from '@/wayfinder';
 import EmptyState from './EmptyState.vue';
+import EntityActions from './EntityActions.vue';
 import FilterBar from './FilterBar.vue';
 
 type EntityRow = Record<string, unknown>;
@@ -27,6 +29,17 @@ type FilterBarConfig = {
     scopeOptions?: FilterBarOption[];
 };
 
+type EntityRowAction = {
+    id: string;
+    label: string;
+    tone?: 'neutral' | 'danger';
+    href?: string | RouteDefinition<'get'>;
+    form?: RouteFormDefinition<'get' | 'post'>;
+    fields?: Record<string, string | number>;
+    target?: '_self' | '_blank';
+    confirm?: string;
+};
+
 const props = withDefaults(
     defineProps<{
         title: string;
@@ -37,12 +50,16 @@ const props = withDefaults(
         emptyMessage?: string;
         emptyTitle?: string;
         filterBar?: FilterBarConfig;
+        rowActions?: (row: any) => EntityRowAction[];
+        csrfToken?: string;
     }>(),
     {
         description: '',
         emptyMessage: 'No records found.',
         emptyTitle: 'No data available',
         filterBar: undefined,
+        rowActions: undefined,
+        csrfToken: '',
     },
 );
 
@@ -127,6 +144,7 @@ const filteredRows = computed(() => {
 
 const hasRows = computed(() => filteredRows.value.length > 0);
 const hasAnyRows = computed(() => props.rows.length > 0);
+const hasRowActions = computed(() => typeof props.rowActions === 'function');
 const filterResultLabel = computed(() => {
     if (! props.filterBar) {
         return '';
@@ -177,6 +195,9 @@ const displayValue = (column: EntityColumn, row: EntityRow): string => {
                             <th v-for="column in props.columns" :key="`${props.title}-${column.key}`" class="border px-3 py-2 text-left">
                                 {{ column.label }}
                             </th>
+                            <th v-if="hasRowActions" class="border px-3 py-2 text-right">
+                                Actions
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -187,6 +208,13 @@ const displayValue = (column: EntityColumn, row: EntityRow): string => {
                                 :class="column.className ?? 'border px-3 py-2'"
                             >
                                 {{ displayValue(column, row) }}
+                            </td>
+                            <td v-if="hasRowActions" class="border px-3 py-2 align-top">
+                                <EntityActions
+                                    orientation="row"
+                                    :actions="props.rowActions?.(row) ?? []"
+                                    :csrf-token="props.csrfToken"
+                                />
                             </td>
                         </tr>
                     </tbody>

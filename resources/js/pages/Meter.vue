@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3';
 import EntityForm from '@/components/operator/EntityForm.vue';
 import EntityTable from '@/components/operator/EntityTable.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
+import { DeleteMeter, meter_info } from '@/routes';
 
 type Meter = {
     meter_id: number;
@@ -126,6 +127,24 @@ const columns = [
         label: 'Status',
     },
 ];
+
+const rowActions = (meterRow: Meter) => [
+    {
+        id: `inspect-meter-${meterRow.meter_id}`,
+        label: 'Inspect',
+        form: meter_info.form(),
+        fields: { meterID: meterRow.meter_id },
+        target: '_blank' as const,
+    },
+    {
+        id: `delete-meter-${meterRow.meter_id}`,
+        label: 'Delete',
+        tone: 'danger' as const,
+        form: DeleteMeter.form(),
+        fields: { meterID: meterRow.meter_id },
+        confirm: `Delete meter ${meterRow.meter_name}?`,
+    },
+];
 </script>
 
 <template>
@@ -151,6 +170,8 @@ const columns = [
                 queryKeys: ['meter_name', 'meter_default_name', 'meter_status'],
                 statusKey: 'meter_status',
             }"
+            :row-actions="rowActions"
+            :csrf-token="csrfToken"
         />
     </OperatorPage>
 </template>

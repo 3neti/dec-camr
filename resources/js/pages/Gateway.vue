@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3';
 import EntityForm from '@/components/operator/EntityForm.vue';
 import EntityTable from '@/components/operator/EntityTable.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
+import { DeleteGateway, gateway_info } from '@/routes';
 
 type Gateway = {
     rtu_id: number;
@@ -67,6 +68,24 @@ const columns = [
         render: (value: unknown) => String(value ?? '—'),
     },
 ];
+
+const rowActions = (gatewayRow: Gateway) => [
+    {
+        id: `inspect-gateway-${gatewayRow.rtu_id}`,
+        label: 'Inspect',
+        form: gateway_info.form(),
+        fields: { gatewayID: gatewayRow.rtu_id },
+        target: '_blank' as const,
+    },
+    {
+        id: `delete-gateway-${gatewayRow.rtu_id}`,
+        label: 'Delete',
+        tone: 'danger' as const,
+        form: DeleteGateway.form(),
+        fields: { gatewayID: gatewayRow.rtu_id },
+        confirm: `Delete gateway ${gatewayRow.gateway_sn}?`,
+    },
+];
 </script>
 
 <template>
@@ -97,6 +116,8 @@ const columns = [
                 queryKeys: ['gateway_sn', 'gateway_mac', 'gateway_ip', 'site_code'],
                 scopeKey: 'site_code',
             }"
+            :row-actions="rowActions"
+            :csrf-token="csrfToken"
         />
     </OperatorPage>
 </template>

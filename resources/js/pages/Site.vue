@@ -4,6 +4,7 @@ import EntityForm from '@/components/operator/EntityForm.vue';
 import EntityTable from '@/components/operator/EntityTable.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { delete_site_confirmed, site_details, site_info } from '@/routes';
 
 type Site = {
     site_id: number;
@@ -79,6 +80,29 @@ const columns = [
         label: 'Company ID',
     },
 ];
+
+const rowActions = (siteRow: Site) => [
+    {
+        id: `view-site-${siteRow.site_id}`,
+        label: 'View',
+        href: site_details({ siteID: siteRow.site_id }),
+    },
+    {
+        id: `inspect-site-${siteRow.site_id}`,
+        label: 'Inspect',
+        form: site_info.form(),
+        fields: { siteID: siteRow.site_id },
+        target: '_blank' as const,
+    },
+    {
+        id: `delete-site-${siteRow.site_id}`,
+        label: 'Delete',
+        tone: 'danger' as const,
+        form: delete_site_confirmed.form(),
+        fields: { siteID: siteRow.site_id },
+        confirm: `Delete site ${siteRow.building_code ?? siteRow.site_code ?? siteRow.site_id}?`,
+    },
+];
 </script>
 
 <template>
@@ -110,6 +134,8 @@ const columns = [
             :columns="columns"
             :rows="props.sites"
             row-key="site_id"
+            :row-actions="rowActions"
+            :csrf-token="csrfToken"
         />
     </OperatorPage>
 </template>

@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3';
 import EntityForm from '@/components/operator/EntityForm.vue';
 import EntityTable from '@/components/operator/EntityTable.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
+import { delete_division_confirmed, division_info } from '@/routes';
 
 type Division = {
     division_id: number;
@@ -44,6 +45,24 @@ const columns = [
         label: 'Name',
     },
 ];
+
+const rowActions = (division: Division) => [
+    {
+        id: `inspect-division-${division.division_id}`,
+        label: 'Inspect',
+        form: division_info.form(),
+        fields: { DivisionID: division.division_id },
+        target: '_blank' as const,
+    },
+    {
+        id: `delete-division-${division.division_id}`,
+        label: 'Delete',
+        tone: 'danger' as const,
+        form: delete_division_confirmed.form(),
+        fields: { DivisionID: division.division_id },
+        confirm: `Delete division ${division.division_name}?`,
+    },
+];
 </script>
 
 <template>
@@ -63,6 +82,8 @@ const columns = [
             :columns="columns"
             :rows="props.divisions"
             row-key="division_id"
+            :row-actions="rowActions"
+            :csrf-token="csrfToken"
         />
     </OperatorPage>
 </template>

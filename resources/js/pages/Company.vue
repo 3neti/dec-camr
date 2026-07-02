@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3';
 import EntityForm from '@/components/operator/EntityForm.vue';
 import EntityTable from '@/components/operator/EntityTable.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
+import { company_info, delete_company_confirmed } from '@/routes';
 
 type Company = {
     company_id: number;
@@ -38,6 +39,24 @@ const columns = [
         label: 'Name',
     },
 ];
+
+const rowActions = (company: Company) => [
+    {
+        id: `inspect-company-${company.company_id}`,
+        label: 'Inspect',
+        form: company_info.form(),
+        fields: { CompanyID: company.company_id },
+        target: '_blank' as const,
+    },
+    {
+        id: `delete-company-${company.company_id}`,
+        label: 'Delete',
+        tone: 'danger' as const,
+        form: delete_company_confirmed.form(),
+        fields: { CompanyID: company.company_id },
+        confirm: `Delete company ${company.company_name}?`,
+    },
+];
 </script>
 
 <template>
@@ -57,6 +76,8 @@ const columns = [
             :columns="columns"
             :rows="props.companies"
             row-key="company_id"
+            :row-actions="rowActions"
+            :csrf-token="csrfToken"
         />
     </OperatorPage>
 </template>
