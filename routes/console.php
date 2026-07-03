@@ -148,7 +148,7 @@ Artisan::command('camr:simulate {--profile=demo} {--duration=10m} {--speed=real}
     }
 
     $supportedProfiles = ['minimal', 'demo', 'heavy'];
-    $supportedScenarios = ['normal', 'offline-recovery', 'report-window'];
+    $supportedScenarios = ['normal', 'offline-recovery', 'report-window', 'analytics-demo'];
     $supportedSpeeds = ['slow', 'real', 'fast'];
 
     $profile = strtolower(trim((string) $this->option('profile')));

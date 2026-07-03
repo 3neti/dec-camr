@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Ui;
 
+use App\Models\Building;
 use App\Models\Gateway;
 use App\Models\Meter;
 use App\Models\MeterData;
@@ -35,6 +36,7 @@ final class SimulateTelemetryAction
         'normal',
         'offline-recovery',
         'report-window',
+        'analytics-demo',
     ];
 
     private const SPEED_TO_MINUTES = [
@@ -69,6 +71,10 @@ final class SimulateTelemetryAction
                 'meters_covered' => 0,
                 'gateways_covered' => 0,
             ];
+        }
+
+        if ($scenario === 'analytics-demo') {
+            return $this->seedAnalyticsDemoTelemetry($meters, $dryRun, $anchor);
         }
 
         if ($durationMinutes % $stepMinutes === 0) {
@@ -374,6 +380,226 @@ final class SimulateTelemetryAction
             ->update([
                 'last_log_update' => $timestamp->toDateTimeString(),
             ]);
+    }
+
+    /**
+     * @param  Collection<int, Meter>  $meters
+     * @return array<string, int>
+     */
+    private function seedAnalyticsDemoTelemetry(Collection $meters, bool $dryRun, ?string $anchor): array
+    {
+        $selectedBuildingIds = $meters
+            ->filter(fn (Meter $meter): bool => $meter->building_idx !== null && $meter->building_idx !== 0)
+            ->unique('building_idx')
+            ->pluck('building_idx')
+            ->take(4)
+            ->values();
+
+        if ($selectedBuildingIds->isEmpty()) {
+            return [
+                'rows_inserted' => 0,
+                'meters_covered' => 0,
+                'gateways_covered' => 0,
+            ];
+        }
+
+        $selectedMeters = $meters
+            ->whereIn('building_idx', $selectedBuildingIds->all())
+            ->values();
+
+        $buildingCodes = Building::query()
+            ->whereIn('building_id', $selectedBuildingIds->all())
+            ->pluck('building_code', 'building_id')
+            ->all();
+
+        $gatewayMacs = Gateway::query()
+            ->whereIn('rtu_id', $selectedMeters->pluck('rtu_idx')->unique()->values())
+            ->pluck('gateway_mac', 'rtu_id')
+            ->all();
+
+        $baseDate = $this->resolveDeterministicAnchor($anchor)->startOfDay();
+        $rows = [];
+        $updatedMeterIds = [];
+        $updatedGatewayIds = [];
+        $updatedSiteIds = [];
+
+        foreach ($selectedBuildingIds as $index => $buildingId) {
+            $buildingMeters = $selectedMeters
+                ->where('building_idx', $buildingId)
+                ->values();
+
+            foreach ($buildingMeters as $meterIndex => $meter) {
+                $buildingCode = (string) ($buildingCodes[$meter->building_idx] ?? $meter->site_code);
+                $gatewayMac = (string) ($gatewayMacs[$meter->rtu_idx] ?? '');
+
+                $rows = [
+                    ...$rows,
+                    ...match ($index) {
+                        0 => $this->analyticsDemoWindowRows(
+                            meter: $meter,
+                            buildingCode: $buildingCode,
+                            gatewayMac: $gatewayMac,
+                            start: $baseDate,
+                            startingWhTotal: 100000 + ($meterIndex * 10000),
+                            hourlyDeltas: $this->normalConsumptionPattern(),
+                        ),
+                        1 => $this->analyticsDemoWindowRows(
+                            meter: $meter,
+                            buildingCode: $buildingCode,
+                            gatewayMac: $gatewayMac,
+                            start: $baseDate,
+                            startingWhTotal: 200000 + ($meterIndex * 10000),
+                            hourlyDeltas: $this->abnormalHighConsumptionPattern(),
+                        ),
+                        2 => [
+                            $this->analyticsDemoTelemetryRow($meter, $buildingCode, $gatewayMac, $baseDate, 300000 + ($meterIndex * 10000), 620),
+                        ],
+                        default => $this->analyticsDemoWindowRows(
+                            meter: $meter,
+                            buildingCode: $buildingCode,
+                            gatewayMac: $gatewayMac,
+                            start: $baseDate,
+                            startingWhTotal: 400000 + ($meterIndex * 10000),
+                            hourlyDeltas: array_fill(0, 24, 0),
+                        ),
+                    },
+                ];
+
+                $updatedMeterIds[] = (int) $meter->meter_id;
+                $updatedGatewayIds[] = (int) $meter->rtu_idx;
+                $updatedSiteIds[] = (int) $meter->site_idx;
+            }
+        }
+
+        if (! $dryRun && $rows !== []) {
+            MeterData::query()->insert($rows);
+            $lastTimestamp = $baseDate->addHours(23)->addMinutes(55);
+            $this->updateState(
+                'report-window',
+                array_values(array_unique($updatedMeterIds)),
+                array_values(array_unique($updatedGatewayIds)),
+                array_values(array_unique($updatedSiteIds)),
+                $lastTimestamp,
+            );
+        }
+
+        return [
+            'rows_inserted' => $dryRun ? 0 : count($rows),
+            'meters_covered' => count(array_unique($updatedMeterIds)),
+            'gateways_covered' => count(array_unique($updatedGatewayIds)),
+        ];
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function normalConsumptionPattern(): array
+    {
+        return [
+            48, 46, 44, 42, 45, 55,
+            72, 88, 96, 102, 108, 112,
+            118, 116, 110, 104, 98, 86,
+            74, 66, 58, 54, 51, 49,
+        ];
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function abnormalHighConsumptionPattern(): array
+    {
+        return [
+            72, 70, 68, 66, 74, 98,
+            130, 168, 210, 252, 286, 310,
+            342, 360, 330, 292, 248, 206,
+            170, 142, 116, 98, 86, 78,
+        ];
+    }
+
+    /**
+     * @return list<array<string, int|float|string|CarbonImmutable>>
+     */
+    private function analyticsDemoWindowRows(
+        Meter $meter,
+        string $buildingCode,
+        string $gatewayMac,
+        CarbonImmutable $start,
+        int $startingWhTotal,
+        array $hourlyDeltas,
+    ): array {
+        $rows = [];
+        $runningWhTotal = $startingWhTotal;
+
+        foreach ($hourlyDeltas as $hour => $delta) {
+            $windowStart = $start->addHours($hour);
+            $rows[] = $this->analyticsDemoTelemetryRow($meter, $buildingCode, $gatewayMac, $windowStart, $runningWhTotal, $delta);
+
+            $runningWhTotal += $delta;
+            $rows[] = $this->analyticsDemoTelemetryRow($meter, $buildingCode, $gatewayMac, $windowStart->addMinutes(55), $runningWhTotal, $delta);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<string, int|float|string|CarbonImmutable>
+     */
+    private function analyticsDemoTelemetryRow(
+        Meter $meter,
+        string $buildingCode,
+        string $gatewayMac,
+        CarbonImmutable $timestamp,
+        int $whTotal,
+        int $hourlyDelta,
+    ): array {
+        $baseLoad = max(1, $hourlyDelta);
+
+        return [
+            'location' => $buildingCode,
+            'meter_id' => (string) $meter->meter_name,
+            'datetime' => $timestamp->toDateTimeString(),
+            'vrms_a' => 228 + ($hourlyDelta % 5),
+            'vrms_b' => 226 + ($hourlyDelta % 4),
+            'vrms_c' => 227 + ($hourlyDelta % 3),
+            'irms_a' => round(2.5 + ($baseLoad / 100), 3),
+            'irms_b' => round(2.4 + ($baseLoad / 110), 3),
+            'irms_c' => round(2.3 + ($baseLoad / 120), 3),
+            'freq' => 59.92 + (($hourlyDelta % 4) * 0.01),
+            'pf' => 0.92 + (($hourlyDelta % 6) * 0.01),
+            'watt' => $baseLoad * 16,
+            'va' => $baseLoad * 18,
+            'var' => $baseLoad * 4,
+            'wh_del' => $whTotal,
+            'wh_rec' => 0,
+            'wh_net' => $whTotal,
+            'wh_total' => $whTotal,
+            'varh_neg' => $baseLoad,
+            'varh_pos' => $baseLoad * 2,
+            'varh_net' => $baseLoad * 3,
+            'varh_total' => $baseLoad * 4,
+            'vah_total' => $baseLoad * 5,
+            'max_rec_kw_dmd' => round($baseLoad / 100, 3),
+            'max_rec_kw_dmd_time' => $timestamp->toDateTimeString(),
+            'max_del_kw_dmd' => round($baseLoad / 110, 3),
+            'max_del_kw_dmd_time' => $timestamp->toDateTimeString(),
+            'max_pos_kvar_dmd' => round($baseLoad / 300, 3),
+            'max_pos_kvar_dmd_time' => $timestamp->toDateTimeString(),
+            'max_neg_kvar_dmd' => round($baseLoad / 400, 3),
+            'max_neg_kvar_dmd_time' => $timestamp->toDateTimeString(),
+            'v_ph_angle_a' => 0.1,
+            'v_ph_angle_b' => 0.2,
+            'v_ph_angle_c' => 0.3,
+            'i_ph_angle_a' => 1.1,
+            'i_ph_angle_b' => 1.2,
+            'i_ph_angle_c' => 1.3,
+            'mac_addr' => $gatewayMac,
+            'soft_rev' => '2.12',
+            'relay_status' => 0,
+            'dt' => $timestamp,
+            'genset_status' => 0,
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ];
     }
 
     /**

@@ -93,6 +93,14 @@ The telemetry simulator should generate meaningful analytics data:
 
 Simulator scenarios should support analytics review, but must not encode analytics business logic.
 
+The canonical analytics showcase scenario is:
+
+```bash
+php artisan camr:scenario analytics-demo
+```
+
+Use this before mounting or reviewing analytics UI. It creates deterministic normal consumption, abnormal high consumption, demand peaks, incomplete windows, unknown zero-delta windows, and ranked building-comparison data without introducing fake Vue values.
+
 ## Scenario Runner Relationship
 
 Lifecycle scenarios should orchestrate analytics demonstrations and journey tests:
@@ -129,4 +137,3 @@ Avoid generic chart wrappers until repeated usage proves a real pattern.
 - Copying Operator Console alert colors into historical analysis.
 - Creating attractive charts before data contracts are accepted.
 - Building a report replacement instead of an analytics workbench.
-

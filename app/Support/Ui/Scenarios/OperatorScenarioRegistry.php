@@ -136,6 +136,20 @@ final class OperatorScenarioRegistry
                 suggestedTestFilter: '--filter=heavy-data-readiness',
                 demoNotes: 'Use before performance-focused UI slicing.',
             ),
+            'analytics-demo' => new OperatorScenarioDefinition(
+                key: 'analytics-demo',
+                title: 'Analytics showcase data readiness',
+                persona: 'Energy Manager',
+                seedProfile: 'demo',
+                simulatorScenario: 'analytics-demo',
+                simulatorDuration: '24h',
+                simulatorSpeed: 'fast',
+                deterministicAnchor: '2026-07-01 08:00:00',
+                startingState: 'Demo maintenance entities exist with selected meters prepared for analytics showcase telemetry.',
+                expectedOutcome: 'Analytics contracts expose normal consumption, abnormal high consumption, demand peaks, incomplete windows, unknown windows, and ranked building comparisons.',
+                suggestedTestFilter: '--filter=analytics-demo-data-readiness',
+                demoNotes: 'Use before mounting Analytics UI so future charts have visible analytical patterns instead of flat rows.',
+            ),
         ];
     }
 }

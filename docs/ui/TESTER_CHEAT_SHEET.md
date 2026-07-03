@@ -137,6 +137,7 @@ Production safety:
 php artisan camr:scenario --list
 php artisan camr:scenario fresh-install-smoke
 php artisan camr:scenario operations-gateway-recovery
+php artisan camr:scenario analytics-demo
 php artisan camr:scenario analyst-report-export --dry-run --anchor="2026-07-01 08:00:00"
 ```
 
@@ -148,6 +149,7 @@ Available scenarios:
 | `operations-gateway-recovery` | Operations Engineer | demo | offline-recovery | Offline/stale gateway recovery validation. |
 | `maintenance-meter-update` | Maintenance Technician | demo | normal | Site, gateway, and meter maintenance path. |
 | `analyst-report-export` | Analyst | demo | report-window | Report/export workflow preparation. |
+| `analytics-demo` | Energy Manager | demo | analytics-demo | Analytics showcase readiness with normal consumption, abnormal consumption, demand peak, incomplete windows, and unknown windows. |
 | `fresh-install-smoke` | Administrator | minimal | normal | Fast fresh-install baseline check. |
 | `heavy-data-readiness` | Operations Engineer | heavy | report-window | High-volume UI/performance readiness. |
 
@@ -162,6 +164,15 @@ Anchor behavior:
 - A custom `--anchor="2026-07-01 08:00:00"` overrides the scenario default.
 - `fresh-install-smoke` and `heavy-data-readiness` have default anchor `2026-07-01 08:00:00`.
 - Other scenarios use the simulator default unless an anchor is provided.
+
+Analytics demo:
+
+```bash
+php artisan migrate:fresh --force
+php artisan camr:scenario analytics-demo
+```
+
+Use this before reviewing future Analytics Workbench UI. It prepares deterministic telemetry for `2026-07-01` with normal consumption, abnormal high consumption, demand peaks, incomplete data, unknown zero-delta data, and building comparison output.
 
 Production safety:
 
@@ -181,6 +192,141 @@ npm run build
 ```
 
 If the app is served through Herd, use the Herd site URL and still run `npm run dev` for local Vite development.
+
+Current Herd URL:
+
+```text
+http://dec-camr.test/
+```
+
+## Current UI Evaluation
+
+Use this section to review the UI that is currently visible in the web app.
+
+Recommended setup:
+
+```bash
+php artisan migrate:fresh --force
+php artisan camr:seed-profile --profile=demo
+php artisan camr:simulate --profile=demo --duration=10m --speed=real --anchor="2026-07-01 08:00:00"
+```
+
+Keep Vite running in a separate terminal:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://dec-camr.test/
+```
+
+Login:
+
+```text
+Username: ops_admin_demo
+Password: Demo@1234
+```
+
+### Primary Operator Entry
+
+| Purpose | Endpoint | Notes |
+|---|---|---|
+| Login | `/` | Legacy username login. |
+| Operator home | `/site` | Primary CAMR operator home/dashboard entry. Navigation and logo links should target this route. |
+| Compatibility dashboard | `/dashboard` | Compatibility route only. Do not treat this as the main operator shell unless explicitly approved. |
+
+### Maintenance UI
+
+These pages have the current operator-shell and maintenance-page modernization work.
+
+| Area | Endpoint | What to Check |
+|---|---|---|
+| Company | `/company` | Card shell, form spacing, list layout, action column. |
+| Division | `/division` | Card shell, form spacing, list layout, action column. |
+| Configuration | `/configuration_file` | Configuration File List spacing and maintenance layout. |
+| Site | `/site` | Operator home behavior, site management, dashboard-style panels. |
+| Building | `/building` | Building maintenance layout and seeded building data. |
+| Gateway | `/gateway` | Gateway maintenance plus seeded/simulated gateway state. |
+| Meter | `/meter` | Meter maintenance plus seeded/simulated meter state. |
+| User Management | `/user` | Admin-only user management and User List spacing. |
+| User Site Access | `/user_site_access` | Admin-only site-access workflow. |
+| Security Settings | `/settings/security` | Security page should stay inside the app shell. |
+
+### Reports UI
+
+These pages use the Reports UX foundation.
+
+| Report | Endpoint | What to Check |
+|---|---|---|
+| Raw Report | `/raw_report` | Report family selector, filters, preview/empty state, export controls. |
+| SAP Report | `/sap_report` | Report workflow clarity and export path. |
+| Site / Building Report | `/site_report` | Site/building report filters and export path. |
+| Consumption Report | `/consumption_report` | Hourly/daily filter workflow and download behavior. |
+| Demand Report | `/demand_report` | Hourly/15-minute filter workflow and download behavior. |
+
+### Live Operations UI
+
+Live Operations MVP components are currently surfaced through the operator console work rather than a separate `/operations` route.
+
+Use the demo simulator scenario when evaluating operational tension:
+
+```bash
+php artisan camr:scenario operations-gateway-recovery
+```
+
+Then review:
+
+```text
+/site
+/gateway
+/meter
+```
+
+Look for:
+
+- gateway health,
+- meter health,
+- telemetry recency,
+- pending updates,
+- recovery/stale/offline signals,
+- quick operational actions where visible.
+
+### Analytics Workbench Status
+
+Analytics work through AN-013 is currently component and contract foundation only.
+
+There is no analytics web endpoint yet.
+
+Implemented analytics components are not expected to appear in the app until a later analytics page/workspace task integrates them.
+
+Current analytics components:
+
+| Work Item | Component | Visible Endpoint |
+|---|---|---|
+| AN-007 | `TimeRangePicker.vue` | Not exposed yet. |
+| AN-008 | `AggregationSelector.vue` | Not exposed yet. |
+| AN-009 | `ConsumptionSummaryCard.vue` | Not exposed yet. |
+| AN-010 | `ConsumptionTrend.vue` | Not exposed yet. |
+| AN-011 | `DemandCurve.vue` | Not exposed yet. |
+| AN-012 | `BuildingComparisonGrid.vue` | Not exposed yet. |
+| AN-013 | `LoadProfileExplorer.vue` | Not exposed yet. |
+
+To evaluate Analytics today, review the component files directly or wait for the future analytics workspace integration. Do not expect new navigation links or endpoints for AN-007 through AN-013 yet.
+
+### Protocol / Device Endpoints
+
+These are external protocol endpoints, not browser UI pages.
+
+| Purpose | Endpoint |
+|---|---|
+| RTU time check | `/check_time.php` |
+| Telemetry ingestion | `/http_post_server.php` |
+| RTU update protocol | `/rtu/index.php/rtu/rtu_check_update/{mac}/...` |
+
+Do not use these for visual UI review.
 
 ## Testing Commands
 
@@ -263,4 +409,3 @@ Password: Demo@1234
 | No telemetry rows | Simulator was not run or used dry-run. | `php artisan camr:simulate --profile=demo --duration=10m --speed=real` |
 | Login user not found | Wrong seed profile or fresh database. | `php artisan camr:seed-profile --profile=demo` |
 | Login password fails | Mixing legacy `db:seed` credentials with profile credentials. | Use profile password `Demo@1234`; legacy `db:seed` admin uses `123456`. |
-
