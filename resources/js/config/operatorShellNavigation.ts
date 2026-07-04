@@ -85,6 +85,12 @@ const sections: OperatorShellNavSection[] = [
         title: 'Reports',
         items: [
             {
+                title: 'Analytics',
+                href: '/analytics',
+                icon: FileBarChart,
+                quickAccess: true,
+            },
+            {
                 title: 'SAP Report',
                 href: '/sap_report',
                 icon: FileBarChart,

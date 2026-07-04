@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\LegacyAuthController;
 use App\Http\Controllers\BuildingController;
 use App\Http\Controllers\CompanyController;
@@ -47,6 +48,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware([EnsureLegacyAuthenticated::class])->group(function () {
+    Route::get('/analytics', AnalyticsController::class)->name('analytics');
+
     Route::get('/site', [SiteController::class, 'site'])->name('site');
     Route::get('/site/list', [SiteController::class, 'siteList'])->name('SiteList');
     Route::get('/site/user/list', [SiteController::class, 'siteUserList'])->name('UserSiteList');

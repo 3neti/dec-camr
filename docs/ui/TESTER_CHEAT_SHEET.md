@@ -199,6 +199,30 @@ Current Herd URL:
 http://dec-camr.test/
 ```
 
+## Current App Endpoints
+
+Operator console:
+
+```text
+/site
+```
+
+Analytics Workbench shell:
+
+```text
+/analytics
+```
+
+Reports:
+
+```text
+/sap_report
+/raw_report
+/site_report
+/consumption_report
+/demand_report
+```
+
 ## Current UI Evaluation
 
 Use this section to review the UI that is currently visible in the web app.
