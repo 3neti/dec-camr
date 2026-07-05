@@ -54,6 +54,37 @@ final class AnalyticsController extends Controller
                 'Review contract evidence before visual workspace composition.',
                 'Keep Reports as the formal workbook/export workflow.',
             ],
+            'exportPanel' => [
+                'title' => 'Evidence Export Panel',
+                'description' => 'Use Analytics to frame the evidence package, then open Reports for formal workbook exports.',
+                'actions' => [
+                    [
+                        'id' => 'consumption-report',
+                        'label' => 'Open Consumption Report',
+                        'description' => 'Use the formal report workflow when this evidence needs workbook output.',
+                        'reportFamily' => 'consumption',
+                    ],
+                    [
+                        'id' => 'demand-report',
+                        'label' => 'Open Demand Report',
+                        'description' => 'Validate peak demand evidence against the approved Demand report workflow.',
+                        'reportFamily' => 'demand',
+                    ],
+                    [
+                        'id' => 'raw-report',
+                        'label' => 'Open Raw Report',
+                        'description' => 'Inspect source telemetry rows behind the analytical evidence.',
+                        'reportFamily' => 'raw',
+                    ],
+                    [
+                        'id' => 'site-report',
+                        'label' => 'Open Site Report',
+                        'description' => 'Review building and site-level report output without changing Analytics semantics.',
+                        'reportFamily' => 'site',
+                    ],
+                ],
+                'preservationNote' => 'Analytics explains evidence. Reports remain the approved workflow for formal XLSX and workbook exports.',
+            ],
             ...$this->buildAnalyticsWorkbenchData->execute(),
         ]);
     }

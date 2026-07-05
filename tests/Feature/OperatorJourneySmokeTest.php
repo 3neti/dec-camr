@@ -282,6 +282,150 @@ test('analyst-report-export smoke validates preview and export workflow on seede
         ->assertHeaderContains('Content-Disposition', '.xlsx');
 });
 
+test('energy-manager analytics smoke validates abnormal consumption investigation and report handoff', function () use ($seedProfileAdminPassword, $fetchScenarioUser, $scenarioAnchor) {
+    $this->travelTo($scenarioAnchor);
+
+    $this->artisan(sprintf('camr:scenario analytics-demo --anchor="%s"', $scenarioAnchor->format('Y-m-d H:i:s')))
+        ->assertSuccessful()
+        ->expectsOutputToContain('Scenario: analytics-demo')
+        ->expectsOutputToContain('Simulation status: completed (scenario=analytics-demo)');
+
+    $energyManager = $fetchScenarioUser('analyst_demo');
+
+    $loginResponse = $this->post('/login-user', [
+        'user_name' => $energyManager->name,
+        'InputPassword' => $seedProfileAdminPassword,
+    ]);
+
+    $loginResponse
+        ->assertRedirect('/site')
+        ->assertSessionHas('loginID', $energyManager->id);
+
+    $analyticsResponse = $this->withSession(['loginID' => $energyManager->id])
+        ->get('/analytics')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Analytics')
+            ->where('title', 'Analytics Workbench')
+            ->where('status.label', 'Workspace Composed')
+            ->where('analyticsContext.hasData', true)
+            ->where('exportPanel.title', 'Evidence Export Panel')
+            ->where('exportPanel.actions.0.reportFamily', 'consumption')
+            ->where('exportPanel.actions.1.reportFamily', 'demand')
+            ->where('exportPanel.actions.2.reportFamily', 'raw')
+            ->where('exportPanel.actions.3.reportFamily', 'site')
+        );
+
+    $buildingSummaries = collect($analyticsResponse->inertiaProps('contractData.buildingSummaries'));
+    $consumptionPoints = collect($analyticsResponse->inertiaProps('contractData.consumptionPoints'));
+    $demandPoints = collect($analyticsResponse->inertiaProps('contractData.demandPoints'));
+    $topBuilding = $buildingSummaries->first();
+    $secondBuilding = $buildingSummaries->skip(1)->first();
+    $peakDemandPoint = $demandPoints
+        ->filter(fn (array $point): bool => (bool) ($point['peakMarker']['isPeak'] ?? false))
+        ->first();
+
+    expect($buildingSummaries)->not->toBeEmpty();
+    expect($topBuilding)->not->toBeNull();
+    expect($secondBuilding)->not->toBeNull();
+    expect((bool) ($topBuilding['comparison']['isTopConsumer'] ?? false))->toBeTrue();
+    expect((float) $topBuilding['totalKwh'])->toBeGreaterThan((float) $secondBuilding['totalKwh']);
+    expect($consumptionPoints->contains(fn (array $point): bool => $point['confidence']['level'] === 'Calculated'))->toBeTrue();
+    expect($demandPoints->contains(fn (array $point): bool => $point['confidence']['level'] === 'Calculated'))->toBeTrue();
+    expect($peakDemandPoint)->not->toBeNull();
+    expect($analyticsResponse->inertiaProps('contractEvidence.incompleteCount'))->toBeGreaterThan(0);
+    expect($buildingSummaries->contains(fn (array $summary): bool => $summary['confidence']['level'] !== 'Calculated'))->toBeTrue();
+    expect($analyticsResponse->inertiaProps('exportPanel.preservationNote'))->toBe('Analytics explains evidence. Reports remain the approved workflow for formal XLSX and workbook exports.');
+
+    $this->withSession(['loginID' => $energyManager->id])
+        ->get('/consumption_report')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('reportType', 'consumption')
+            ->where('downloadShelf.title', 'Download shelf')
+        );
+
+    $this->withSession(['loginID' => $energyManager->id])
+        ->get('/demand_report')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('reportType', 'demand')
+            ->where('downloadShelf.title', 'Download shelf')
+        );
+
+    $this->travelBack();
+});
+
+test('executive analytics smoke validates concise review of trend top movers and confidence summary', function () use ($seedProfileAdminPassword, $fetchScenarioUser, $scenarioAnchor) {
+    $this->travelTo($scenarioAnchor);
+
+    $this->artisan(sprintf('camr:scenario analytics-demo --anchor="%s"', $scenarioAnchor->format('Y-m-d H:i:s')))
+        ->assertSuccessful()
+        ->expectsOutputToContain('Scenario: analytics-demo')
+        ->expectsOutputToContain('Simulation status: completed (scenario=analytics-demo)');
+
+    $executiveReviewer = $fetchScenarioUser('analyst_demo');
+
+    $loginResponse = $this->post('/login-user', [
+        'user_name' => $executiveReviewer->name,
+        'InputPassword' => $seedProfileAdminPassword,
+    ]);
+
+    $loginResponse
+        ->assertRedirect('/site')
+        ->assertSessionHas('loginID', $executiveReviewer->id);
+
+    $analyticsResponse = $this->withSession(['loginID' => $executiveReviewer->id])
+        ->get('/analytics')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Analytics')
+            ->where('title', 'Analytics Workbench')
+            ->where('status.label', 'Workspace Composed')
+            ->where('analyticsContext.hasData', true)
+            ->where('exportPanel.title', 'Evidence Export Panel')
+            ->where('exportPanel.actions.0.label', 'Open Consumption Report')
+            ->where('exportPanel.actions.1.label', 'Open Demand Report')
+        );
+
+    $buildingSummaries = collect($analyticsResponse->inertiaProps('contractData.buildingSummaries'));
+    $consumptionPoints = collect($analyticsResponse->inertiaProps('contractData.consumptionPoints'));
+    $demandPoints = collect($analyticsResponse->inertiaProps('contractData.demandPoints'));
+    $topBuilding = $buildingSummaries->first();
+    $secondBuilding = $buildingSummaries->skip(1)->first();
+    $calculatedConsumptionTotal = $consumptionPoints
+        ->filter(fn (array $point): bool => $point['confidence']['level'] === 'Calculated')
+        ->sum(fn (array $point): float => (float) $point['kwhTotal']);
+    $peakDemand = $demandPoints
+        ->filter(fn (array $point): bool => $point['confidence']['level'] === 'Calculated')
+        ->max('kwDemand');
+
+    expect($analyticsResponse->inertiaProps('contractEvidence.consumptionPointCount'))->toBeGreaterThan(0);
+    expect($analyticsResponse->inertiaProps('contractEvidence.demandPointCount'))->toBeGreaterThan(0);
+    expect($analyticsResponse->inertiaProps('contractEvidence.buildingSummaryCount'))->toBeGreaterThan(1);
+    expect($calculatedConsumptionTotal)->toBeGreaterThan(0);
+    expect($peakDemand)->toBeGreaterThan(0);
+    expect($topBuilding)->not->toBeNull();
+    expect($secondBuilding)->not->toBeNull();
+    expect((bool) ($topBuilding['comparison']['isTopConsumer'] ?? false))->toBeTrue();
+    expect((float) $topBuilding['totalKwh'])->toBeGreaterThan((float) $secondBuilding['totalKwh']);
+    expect($buildingSummaries->contains(fn (array $summary): bool => $summary['confidence']['level'] !== 'Calculated'))->toBeTrue();
+    expect($analyticsResponse->inertiaProps('exportPanel.preservationNote'))->toBe('Analytics explains evidence. Reports remain the approved workflow for formal XLSX and workbook exports.');
+
+    $this->withSession(['loginID' => $executiveReviewer->id])
+        ->get('/site_report')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Reports')
+            ->where('reportType', 'site')
+            ->where('downloadShelf.title', 'Download shelf')
+        );
+
+    $this->travelBack();
+});
+
 test('maintenance-meter-update smoke validates scoped site to gateway to meter workflow', function () use ($seedProfileAdminPassword, $fetchScenarioUser, $scenarioAnchor) {
     $this->travelTo($scenarioAnchor);
 

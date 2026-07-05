@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import {
+    consumptionReport,
+    demandReport,
+    rawReport,
+    siteReport,
+} from '@/actions/App/Http/Controllers/ReportController';
 import AnalyticsEmptyState from '@/components/analytics/AnalyticsEmptyState.vue';
+import AnalyticsExportPanel from '@/components/analytics/AnalyticsExportPanel.vue';
 import BuildingComparisonGrid from '@/components/analytics/BuildingComparisonGrid.vue';
 import ConsumptionSummaryCard from '@/components/analytics/ConsumptionSummaryCard.vue';
 import ConsumptionTrend from '@/components/analytics/ConsumptionTrend.vue';
@@ -42,6 +49,7 @@ type ContractEvidence = {
 
 type EmptyStateKind = 'missing-filter' | 'no-data' | 'incomplete-data' | 'unsupported-grain';
 type TrustLevel = 'Measured' | 'Calculated' | 'Estimated' | 'Incomplete' | 'Unknown';
+type ReportFamily = 'consumption' | 'demand' | 'raw' | 'site';
 
 type DataTrustIndicator = {
     level: TrustLevel;
@@ -114,12 +122,25 @@ type BuildingConsumptionSummary = {
     };
 };
 
+type ExportPanelAction = {
+    id: string;
+    label: string;
+    description: string;
+    reportFamily: ReportFamily;
+};
+
 const props = defineProps<{
     title: string;
     subtitle: string;
     status: {
         label: string;
         description: string;
+    };
+    exportPanel: {
+        title: string;
+        description: string;
+        actions: ExportPanelAction[];
+        preservationNote: string;
     };
     workbenchSections: WorkbenchSection[];
     readinessChecklist: string[];
@@ -162,6 +183,21 @@ const evidenceCards = computed(() => [
         detail: `${props.contractEvidence.incompleteCount} incomplete / ${props.contractEvidence.unknownCount} unknown`,
     },
 ]);
+
+const reportUrls: Record<ReportFamily, string> = {
+    consumption: consumptionReport.url(),
+    demand: demandReport.url(),
+    raw: rawReport.url(),
+    site: siteReport.url(),
+};
+
+const exportPanelActions = computed(() => props.exportPanel.actions.map((action) => ({
+    id: action.id,
+    label: action.label,
+    description: action.description,
+    href: reportUrls[action.reportFamily],
+    primary: action.reportFamily === 'consumption',
+})));
 
 const calculatedConsumptionPoints = computed(() => props.contractData.consumptionPoints.filter((point) => point.confidence.level === 'Calculated' && typeof point.kwhTotal === 'number'));
 const calculatedDemandPoints = computed(() => props.contractData.demandPoints.filter((point) => point.confidence.level === 'Calculated' && typeof point.kwDemand === 'number'));
@@ -382,6 +418,28 @@ const formatNumber = (value: number | null) => {
                             }"
                             :consumption-points="props.contractData.consumptionPoints"
                             :demand-points="props.contractData.demandPoints"
+                        />
+
+                        <AnalyticsExportPanel
+                            :title="props.exportPanel.title"
+                            :description="props.exportPanel.description"
+                            :context="{
+                                hasData: props.analyticsContext.hasData,
+                                periodLabel: props.analyticsContext.periodLabel,
+                                meterIdentifier: props.analyticsContext.meterIdentifier,
+                                buildingCode: props.analyticsContext.buildingCode,
+                                siteCode: props.analyticsContext.siteCode,
+                                grain: props.analyticsContext.grain,
+                            }"
+                            :evidence="{
+                                consumptionPointCount: props.contractEvidence.consumptionPointCount,
+                                demandPointCount: props.contractEvidence.demandPointCount,
+                                buildingSummaryCount: props.contractEvidence.buildingSummaryCount,
+                                incompleteCount: props.contractEvidence.incompleteCount,
+                                unknownCount: props.contractEvidence.unknownCount,
+                            }"
+                            :actions="exportPanelActions"
+                            :preservation-note="props.exportPanel.preservationNote"
                         />
                     </div>
 

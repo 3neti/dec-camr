@@ -23,6 +23,9 @@ test('analytics workbench shell renders through inertia when loginID exists', fu
             ->component('Analytics')
             ->where('title', 'Analytics Workbench')
             ->where('status.label', 'Workspace Composed')
+            ->where('exportPanel.title', 'Evidence Export Panel')
+            ->where('exportPanel.actions.0.id', 'consumption-report')
+            ->where('exportPanel.actions.0.reportFamily', 'consumption')
             ->where('workbenchSections.0.id', 'consumption')
             ->where('workbenchSections.1.id', 'demand')
             ->where('workbenchSections.2.id', 'building-comparison')
@@ -48,6 +51,7 @@ test('analytics workbench receives real contract data from analytics demo scenar
         ->assertInertia(fn (Assert $page) => $page
             ->component('Analytics')
             ->where('status.label', 'Workspace Composed')
+            ->where('exportPanel.preservationNote', 'Analytics explains evidence. Reports remain the approved workflow for formal XLSX and workbook exports.')
             ->where('analyticsContext.hasData', true)
             ->where('analyticsContext.grain', 'hourly')
             ->where('emptyState.kind', 'missing-filter')
