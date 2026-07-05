@@ -12,6 +12,30 @@ type WorkbenchSection = {
     contract: string;
 };
 
+type AnalyticsContext = {
+    hasData: boolean;
+    meterIdentifier: string | null;
+    buildingCode: string | null;
+    siteCode: string | null;
+    from: string | null;
+    to: string | null;
+    periodLabel: string;
+    grain: string;
+};
+
+type ContractEvidence = {
+    consumptionPointCount: number;
+    demandPointCount: number;
+    buildingSummaryCount: number;
+    calculatedConsumptionCount: number;
+    calculatedDemandCount: number;
+    incompleteCount: number;
+    unknownCount: number;
+    topBuildingCode: string | null;
+};
+
+type EmptyStateKind = 'missing-filter' | 'no-data' | 'incomplete-data' | 'unsupported-grain';
+
 const props = defineProps<{
     title: string;
     subtitle: string;
@@ -21,7 +45,45 @@ const props = defineProps<{
     };
     workbenchSections: WorkbenchSection[];
     readinessChecklist: string[];
+    analyticsContext: AnalyticsContext;
+    contractEvidence: ContractEvidence;
+    contractData: {
+        consumptionPoints: unknown[];
+        demandPoints: unknown[];
+        buildingSummaries: unknown[];
+    };
+    emptyState: {
+        kind: EmptyStateKind;
+        title: string;
+        description: string;
+        contextLabel: string;
+        sourceLabel: string;
+        missingIntervalCount: number;
+    };
 }>();
+
+const evidenceCards = [
+    {
+        label: 'Consumption Points',
+        value: props.contractEvidence.consumptionPointCount,
+        detail: `${props.contractEvidence.calculatedConsumptionCount} calculated`,
+    },
+    {
+        label: 'Demand Points',
+        value: props.contractEvidence.demandPointCount,
+        detail: `${props.contractEvidence.calculatedDemandCount} calculated`,
+    },
+    {
+        label: 'Building Summaries',
+        value: props.contractEvidence.buildingSummaryCount,
+        detail: props.contractEvidence.topBuildingCode ? `Top: ${props.contractEvidence.topBuildingCode}` : 'No top building',
+    },
+    {
+        label: 'Review Flags',
+        value: props.contractEvidence.incompleteCount + props.contractEvidence.unknownCount,
+        detail: `${props.contractEvidence.incompleteCount} incomplete / ${props.contractEvidence.unknownCount} unknown`,
+    },
+];
 </script>
 
 <template>
@@ -46,11 +108,47 @@ const props = defineProps<{
                             </CardDescription>
                         </div>
 
-                        <StatusChip label="AN-016" tone="success" />
+                        <StatusChip label="AN-017" tone="success" />
                     </div>
                 </CardHeader>
 
                 <CardContent class="space-y-5 px-5">
+                    <div class="flex flex-wrap gap-2">
+                        <ScopePill
+                            label="Building"
+                            :value="props.analyticsContext.buildingCode ?? 'No data'"
+                            :tone="props.analyticsContext.hasData ? 'success' : 'warning'"
+                        />
+                        <ScopePill
+                            label="Meter"
+                            :value="props.analyticsContext.meterIdentifier ?? 'No meter'"
+                            :tone="props.analyticsContext.hasData ? 'info' : 'warning'"
+                        />
+                        <ScopePill
+                            label="Grain"
+                            :value="props.analyticsContext.grain"
+                            tone="neutral"
+                        />
+                    </div>
+
+                    <dl class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div
+                            v-for="card in evidenceCards"
+                            :key="card.label"
+                            class="rounded-xl border bg-background/70 p-4"
+                        >
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                {{ card.label }}
+                            </dt>
+                            <dd class="mt-2 text-2xl font-semibold text-foreground">
+                                {{ card.value }}
+                            </dd>
+                            <dd class="mt-1 text-sm leading-6 text-muted-foreground">
+                                {{ card.detail }}
+                            </dd>
+                        </div>
+                    </dl>
+
                     <div class="grid gap-3 md:grid-cols-2">
                         <article
                             v-for="section in props.workbenchSections"
@@ -73,15 +171,18 @@ const props = defineProps<{
                     </div>
 
                     <AnalyticsEmptyState
-                        kind="missing-filter"
-                        title="Analytics data wiring is next"
-                        description="This page is mounted intentionally before contract data is wired. AN-017 will connect the approved analytics contracts to this shell."
-                        context-label="No scope selected"
-                        source-label="AN-016 Route / Page Shell"
+                        :kind="props.emptyState.kind"
+                        :title="props.emptyState.title"
+                        :description="props.emptyState.description"
+                        :context-label="props.emptyState.contextLabel"
+                        :source-label="props.emptyState.sourceLabel"
+                        :missing-interval-count="props.emptyState.missingIntervalCount"
                         :recommended-actions="[
                             {
-                                label: 'Prepare showcase data',
-                                description: 'Run php artisan camr:scenario analytics-demo before visual review.',
+                                label: props.analyticsContext.hasData ? 'Compose workspace' : 'Prepare showcase data',
+                                description: props.analyticsContext.hasData
+                                    ? 'AN-018 can now mount summary cards, trend, demand, comparison, and load-profile components.'
+                                    : 'Run php artisan camr:scenario analytics-demo before visual review.',
                             },
                             {
                                 label: 'Preserve Reports',

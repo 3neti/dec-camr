@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Analytics\BuildAnalyticsWorkbenchDataAction;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final class AnalyticsController extends Controller
 {
+    public function __construct(
+        private readonly BuildAnalyticsWorkbenchDataAction $buildAnalyticsWorkbenchData,
+    ) {}
+
     public function __invoke(): Response
     {
         return Inertia::render('Analytics', [
             'title' => 'Analytics Workbench',
             'subtitle' => 'Investigate historical consumption, demand, comparison, and load-profile evidence without replacing Reports.',
             'status' => [
-                'label' => 'Shell Ready',
-                'description' => 'The workbench route is mounted. Data wiring remains intentionally deferred to the next analytics work item.',
+                'label' => 'Contracts Wired',
+                'description' => 'The workbench shell now receives real analytics contract data. AN-018 will compose the full visual workspace.',
             ],
             'workbenchSections' => [
                 [
@@ -46,9 +51,10 @@ final class AnalyticsController extends Controller
             ],
             'readinessChecklist' => [
                 'Run php artisan camr:scenario analytics-demo for deterministic showcase data.',
-                'Select scope and time range after AN-017 wires contract data.',
+                'Review contract evidence before visual workspace composition.',
                 'Keep Reports as the formal workbook/export workflow.',
             ],
+            ...$this->buildAnalyticsWorkbenchData->execute(),
         ]);
     }
 }
