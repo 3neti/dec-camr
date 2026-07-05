@@ -94,7 +94,7 @@ const evidenceItems = computed(() => [
                 <dl class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                     <div v-for="item in scopeItems" :key="item.label" class="space-y-1">
                         <dt class="text-xs font-medium text-muted-foreground">{{ item.label }}</dt>
-                        <dd class="text-sm font-medium text-foreground">{{ item.value }}</dd>
+                        <dd class="text-sm font-medium leading-5 text-foreground">{{ item.value }}</dd>
                     </div>
                 </dl>
             </div>

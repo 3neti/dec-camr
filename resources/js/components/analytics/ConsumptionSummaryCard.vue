@@ -9,6 +9,7 @@ type DataTrustIndicator = {
     reason?: string;
     missingIntervalCount?: number;
     warning?: string | null;
+    displayLabel?: string;
 };
 
 type ConsumptionComparison = {
@@ -67,17 +68,33 @@ const confidenceTone = computed<'success' | 'warning' | 'danger' | 'neutral'>(()
     return 'neutral';
 });
 
+const displayConfidenceLabel = computed(() => {
+    if (props.confidence.displayLabel) {
+        return props.confidence.displayLabel;
+    }
+
+    if (props.confidence.level === 'Incomplete') {
+        return 'Partial evidence';
+    }
+
+    if (props.confidence.level === 'Unknown' || props.confidence.level === 'Estimated') {
+        return 'Review needed';
+    }
+
+    return 'Evidence ready';
+});
+
 const confidenceClasses = computed(() => ({
-    success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    warning: 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    danger: 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300',
+    success: 'border-emerald-500/15 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300',
+    warning: 'border-amber-500/15 bg-amber-500/5 text-amber-700 dark:text-amber-300',
+    danger: 'border-amber-500/15 bg-amber-500/5 text-amber-700 dark:text-amber-300',
     neutral: 'border-border bg-muted text-muted-foreground',
 }[confidenceTone.value]));
 
 const cardToneClasses = computed(() => ({
     success: 'border-emerald-500/20 bg-emerald-500/5',
     warning: 'border-amber-500/20 bg-amber-500/5',
-    danger: 'border-rose-500/20 bg-rose-500/5',
+    danger: 'border-border/70 bg-card',
     neutral: 'border-border/70 bg-card',
 }[confidenceTone.value]));
 
@@ -110,7 +127,7 @@ const comparisonValue = computed(() => {
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div class="space-y-1">
                     <p class="text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground/80">
-                        Consumption Summary
+                        Key Metric
                     </p>
                     <h3 class="text-base font-semibold text-foreground">
                         {{ props.title }}
@@ -121,7 +138,7 @@ const comparisonValue = computed(() => {
                 </div>
 
                 <span class="inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-medium" :class="confidenceClasses">
-                    {{ props.confidence.level }}
+                    {{ displayConfidenceLabel }}
                 </span>
             </div>
         </CardHeader>
@@ -162,13 +179,16 @@ const comparisonValue = computed(() => {
             <div class="space-y-2 rounded-xl border bg-background/70 p-3">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Trust
+                        Evidence Quality
                     </p>
                     <p class="text-xs text-muted-foreground">
-                        Source: {{ props.sourceLabel }}
+                        {{ props.sourceLabel }}
                     </p>
                 </div>
 
+                <p class="text-xs text-muted-foreground">
+                    Contract confidence: {{ props.confidence.level }}
+                </p>
                 <p v-if="props.confidence.reason" class="text-sm leading-6 text-muted-foreground">
                     {{ props.confidence.reason }}
                 </p>

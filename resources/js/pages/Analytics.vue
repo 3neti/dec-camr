@@ -178,11 +178,20 @@ const evidenceCards = computed(() => [
         detail: props.contractEvidence.topBuildingCode ? `Top: ${props.contractEvidence.topBuildingCode}` : 'No top building',
     },
     {
-        label: 'Review Flags',
+        label: 'Quality Notes',
         value: props.contractEvidence.incompleteCount + props.contractEvidence.unknownCount,
-        detail: `${props.contractEvidence.incompleteCount} incomplete / ${props.contractEvidence.unknownCount} unknown`,
+        detail: `${props.contractEvidence.incompleteCount} partial / ${props.contractEvidence.unknownCount} review`,
     },
 ]);
+
+const contractLabels: Record<string, { short: string; full: string }> = {
+    ConsumptionSeriesPoint: { short: 'Consumption', full: 'ConsumptionSeriesPoint' },
+    DemandSeriesPoint: { short: 'Demand', full: 'DemandSeriesPoint' },
+    BuildingConsumptionSummary: { short: 'Building Summary', full: 'BuildingConsumptionSummary' },
+    'ConsumptionSeriesPoint + DemandSeriesPoint': { short: 'Load Profile', full: 'ConsumptionSeriesPoint + DemandSeriesPoint' },
+};
+
+const displayContract = (contract: string) => contractLabels[contract] ?? { short: contract, full: contract };
 
 const reportUrls: Record<ReportFamily, string> = {
     consumption: consumptionReport.url(),
@@ -210,6 +219,26 @@ const peakDemand = computed(() => calculatedDemandPoints.value.reduce<number | n
     return peak === null || point.kwDemand > peak ? point.kwDemand : peak;
 }, null));
 const topBuilding = computed(() => props.contractData.buildingSummaries[0] ?? null);
+const compactDateTime = (value: string | null) => {
+    if (!value) {
+        return '';
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    }).format(new Date(value));
+};
+const compactPeriodLabel = computed(() => {
+    if (!props.analyticsContext.from || !props.analyticsContext.to) {
+        return props.analyticsContext.periodLabel;
+    }
+
+    return `${compactDateTime(props.analyticsContext.from)} – ${compactDateTime(props.analyticsContext.to)}`;
+});
 const workspaceTrust = computed<DataTrustIndicator>(() => {
     if (!props.analyticsContext.hasData) {
         return {
@@ -253,6 +282,11 @@ const formatNumber = (value: number | null) => {
 
     return Number(value.toFixed(2));
 };
+
+const summaryTrust = computed(() => ({
+    ...workspaceTrust.value,
+    displayLabel: workspaceTrust.value.level === 'Calculated' ? 'Evidence ready' : 'Review needed',
+}));
 </script>
 
 <template>
@@ -334,7 +368,12 @@ const formatNumber = (value: number | null) => {
                                     </p>
                                 </div>
 
-                                <ScopePill label="Contract" :value="section.contract" tone="info" />
+                                <div class="flex flex-col items-start gap-1 sm:items-end">
+                                    <ScopePill label="Evidence" :value="displayContract(section.contract).short" tone="info" />
+                                    <span class="text-[11px] text-muted-foreground" :title="displayContract(section.contract).full">
+                                        {{ displayContract(section.contract).full }}
+                                    </span>
+                                </div>
                             </div>
                         </article>
                     </div>
@@ -345,8 +384,8 @@ const formatNumber = (value: number | null) => {
                                 class="xl:col-span-1"
                                 title="Selected Window Consumption"
                                 :value="formatNumber(totalConsumption)"
-                                :period-label="props.analyticsContext.periodLabel"
-                                :confidence="workspaceTrust"
+                                :period-label="compactPeriodLabel"
+                                :confidence="summaryTrust"
                                 :comparison="{
                                     label: 'Top Building',
                                     value: topBuilding?.buildingCode ?? 'Unavailable',
@@ -361,8 +400,8 @@ const formatNumber = (value: number | null) => {
                                 title="Peak Demand"
                                 :value="formatNumber(peakDemand)"
                                 unit="kW"
-                                :period-label="props.analyticsContext.periodLabel"
-                                :confidence="workspaceTrust"
+                                :period-label="compactPeriodLabel"
+                                :confidence="summaryTrust"
                                 :comparison="{
                                     label: 'Demand Evidence',
                                     value: props.contractEvidence.demandPointCount,
@@ -374,10 +413,10 @@ const formatNumber = (value: number | null) => {
                             />
 
                             <ConsumptionSummaryCard
-                                title="Building Comparison"
+                                title="Building Leader"
                                 :value="formatNumber(topBuilding?.totalKwh ?? null)"
-                                :period-label="props.analyticsContext.periodLabel"
-                                :confidence="workspaceTrust"
+                                :period-label="compactPeriodLabel"
+                                :confidence="summaryTrust"
                                 :comparison="{
                                     label: 'Compared Buildings',
                                     value: props.contractEvidence.buildingSummaryCount,
@@ -414,7 +453,7 @@ const formatNumber = (value: number | null) => {
                                 buildingCode: props.analyticsContext.buildingCode,
                                 siteCode: props.analyticsContext.siteCode,
                                 grain: props.analyticsContext.grain,
-                                periodLabel: props.analyticsContext.periodLabel,
+                                periodLabel: compactPeriodLabel,
                             }"
                             :consumption-points="props.contractData.consumptionPoints"
                             :demand-points="props.contractData.demandPoints"
@@ -425,7 +464,7 @@ const formatNumber = (value: number | null) => {
                             :description="props.exportPanel.description"
                             :context="{
                                 hasData: props.analyticsContext.hasData,
-                                periodLabel: props.analyticsContext.periodLabel,
+                                periodLabel: compactPeriodLabel,
                                 meterIdentifier: props.analyticsContext.meterIdentifier,
                                 buildingCode: props.analyticsContext.buildingCode,
                                 siteCode: props.analyticsContext.siteCode,

@@ -68,23 +68,36 @@ const sortedSummaries = computed<RankedSummary[]>(() => {
 });
 
 const topSummary = computed(() => sortedSummaries.value[0] ?? null);
+const topFiveSummaries = computed(() => sortedSummaries.value.slice(0, 5));
 const totalKwh = computed(() => sortedSummaries.value.reduce((total, summary) => total + summary.totalKwh, 0));
 const incompleteCount = computed(() => sortedSummaries.value.filter((summary) => summary.confidence.level === 'Incomplete').length);
 const unknownCount = computed(() => sortedSummaries.value.filter((summary) => summary.confidence.level === 'Unknown').length);
 const missingIntervalCount = computed(() => sortedSummaries.value.reduce((total, summary) => total + summary.missingData.missingIntervalCount, 0));
 const hasRows = computed(() => sortedSummaries.value.length > 0);
 
-const confidenceClasses = (level: TrustLevel) => {
-    if (level === 'Measured' || level === 'Calculated') {
-        return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
-    }
-
-    if (level === 'Estimated' || level === 'Unknown') {
-        return 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+const displayConfidenceLabel = (level: TrustLevel) => {
+    if (level === 'Calculated' || level === 'Measured') {
+        return 'Evidence ready';
     }
 
     if (level === 'Incomplete') {
-        return 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300';
+        return 'Partial evidence';
+    }
+
+    return 'Review needed';
+};
+
+const confidenceClasses = (level: TrustLevel) => {
+    if (level === 'Measured' || level === 'Calculated') {
+        return 'border-emerald-500/15 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300';
+    }
+
+    if (level === 'Estimated' || level === 'Unknown') {
+        return 'border-amber-500/15 bg-amber-500/5 text-amber-700 dark:text-amber-300';
+    }
+
+    if (level === 'Incomplete') {
+        return 'border-amber-500/15 bg-amber-500/5 text-amber-700 dark:text-amber-300';
     }
 
     return 'border-border bg-muted text-muted-foreground';
@@ -108,7 +121,7 @@ const confidenceClasses = (level: TrustLevel) => {
                 </div>
 
                 <span class="inline-flex w-fit items-center rounded-full border bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                    Source: {{ props.sourceLabel }}
+                    Source: Building Summary
                 </span>
             </div>
         </CardHeader>
@@ -131,7 +144,7 @@ const confidenceClasses = (level: TrustLevel) => {
 
             <div v-if="hasRows" class="grid gap-3 md:hidden">
                 <article
-                    v-for="summary in sortedSummaries"
+                    v-for="summary in topFiveSummaries"
                     :key="`building-card-${summary.buildingId}`"
                     class="rounded-xl border bg-background/70 p-4"
                 >
@@ -142,7 +155,7 @@ const confidenceClasses = (level: TrustLevel) => {
                             <p class="text-sm text-muted-foreground">{{ summary.buildingName }}</p>
                         </div>
                         <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium" :class="confidenceClasses(summary.confidence.level)">
-                            {{ summary.confidence.level }}
+                            {{ displayConfidenceLabel(summary.confidence.level) }}
                         </span>
                     </div>
 
@@ -196,8 +209,20 @@ const confidenceClasses = (level: TrustLevel) => {
                         </tr>
                     </thead>
                     <tbody class="divide-y">
-                        <tr v-for="summary in sortedSummaries" :key="`building-row-${summary.buildingId}`" class="align-top">
-                            <td class="px-3 py-3 font-medium text-foreground">{{ summary.rank }}</td>
+                        <tr
+                            v-for="summary in sortedSummaries"
+                            :key="`building-row-${summary.buildingId}`"
+                            class="align-top"
+                            :class="summary.rank <= 3 ? 'bg-emerald-500/5' : ''"
+                        >
+                            <td class="px-3 py-3 font-medium text-foreground">
+                                <span
+                                    class="inline-flex size-7 items-center justify-center rounded-full text-xs"
+                                    :class="summary.rank <= 3 ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'"
+                                >
+                                    {{ summary.rank }}
+                                </span>
+                            </td>
                             <td class="px-3 py-3">
                                 <div class="space-y-1">
                                     <div class="flex flex-wrap items-center gap-2">
@@ -222,8 +247,11 @@ const confidenceClasses = (level: TrustLevel) => {
                             <td class="px-3 py-3 text-right text-muted-foreground">{{ summary.missingData.missingIntervalCount }}</td>
                             <td class="px-3 py-3">
                                 <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium" :class="confidenceClasses(summary.confidence.level)">
-                                    {{ summary.confidence.level }}
+                                    {{ displayConfidenceLabel(summary.confidence.level) }}
                                 </span>
+                                <p v-if="summary.confidence.level !== 'Calculated'" class="mt-1 text-xs text-muted-foreground">
+                                    {{ summary.confidence.level }}
+                                </p>
                             </td>
                         </tr>
                     </tbody>
@@ -238,13 +266,13 @@ const confidenceClasses = (level: TrustLevel) => {
             </div>
 
             <div v-if="incompleteCount > 0 || unknownCount > 0 || missingIntervalCount > 0" class="rounded-xl border bg-background/70 p-3">
-                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Data Quality</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Evidence Quality</p>
                 <div class="mt-2 flex flex-wrap gap-2 text-xs font-medium">
-                    <span v-if="incompleteCount > 0" class="rounded-full bg-rose-500/10 px-2.5 py-1 text-rose-700 dark:text-rose-300">
-                        Incomplete buildings: {{ incompleteCount }}
+                    <span v-if="incompleteCount > 0" class="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                        Partial evidence: {{ incompleteCount }}
                     </span>
                     <span v-if="unknownCount > 0" class="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
-                        Unknown buildings: {{ unknownCount }}
+                        Review needed: {{ unknownCount }}
                     </span>
                     <span v-if="missingIntervalCount > 0" class="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
                         Missing intervals: {{ missingIntervalCount }}

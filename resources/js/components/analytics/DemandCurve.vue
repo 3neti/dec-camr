@@ -135,7 +135,7 @@ const confidenceLabel = computed(() => {
     }
 
     if (incompleteCount.value > 0) {
-        return 'Incomplete';
+        return 'Partial evidence';
     }
 
     if (unknownCount.value > 0) {
@@ -154,8 +154,8 @@ const confidenceClasses = computed(() => {
         return 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300';
     }
 
-    if (confidenceLabel.value === 'Incomplete') {
-        return 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300';
+    if (confidenceLabel.value === 'Partial evidence') {
+        return 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300';
     }
 
     return 'border-border bg-muted text-muted-foreground';
@@ -183,7 +183,7 @@ const confidenceClasses = computed(() => {
                         {{ confidenceLabel }}
                     </span>
                     <span class="inline-flex w-fit items-center rounded-full border bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                        Source: {{ props.sourceLabel }}
+                        Source: Demand
                     </span>
                 </div>
             </div>
@@ -259,13 +259,13 @@ const confidenceClasses = computed(() => {
             </div>
 
             <div v-if="incompleteCount > 0 || unknownCount > 0 || missingIntervalCount > 0" class="rounded-xl border bg-background/70 p-3">
-                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Data Quality</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Evidence Quality</p>
                 <div class="mt-2 flex flex-wrap gap-2 text-xs font-medium">
-                    <span v-if="incompleteCount > 0" class="rounded-full bg-rose-500/10 px-2.5 py-1 text-rose-700 dark:text-rose-300">
-                        Incomplete points: {{ incompleteCount }}
+                    <span v-if="incompleteCount > 0" class="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                        Partial evidence: {{ incompleteCount }}
                     </span>
                     <span v-if="unknownCount > 0" class="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
-                        Unknown points: {{ unknownCount }}
+                        Review needed: {{ unknownCount }}
                     </span>
                     <span v-if="missingIntervalCount > 0" class="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
                         Missing intervals: {{ missingIntervalCount }}

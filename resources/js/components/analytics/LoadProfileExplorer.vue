@@ -147,17 +147,17 @@ const investigationSteps = computed(() => [
                 <div v-if="incompleteConsumptionCount > 0 || incompleteDemandCount > 0 || unknownConsumptionCount > 0 || unknownDemandCount > 0 || missingIntervalCount > 0" class="rounded-xl border bg-background/70 p-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Profile Evidence</p>
                     <div class="mt-2 flex flex-wrap gap-2 text-xs font-medium">
-                        <span v-if="incompleteConsumptionCount > 0" class="rounded-full bg-rose-500/10 px-2.5 py-1 text-rose-700 dark:text-rose-300">
-                            Incomplete consumption: {{ incompleteConsumptionCount }}
+                        <span v-if="incompleteConsumptionCount > 0" class="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                            Partial consumption: {{ incompleteConsumptionCount }}
                         </span>
-                        <span v-if="incompleteDemandCount > 0" class="rounded-full bg-rose-500/10 px-2.5 py-1 text-rose-700 dark:text-rose-300">
-                            Incomplete demand: {{ incompleteDemandCount }}
+                        <span v-if="incompleteDemandCount > 0" class="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                            Partial demand: {{ incompleteDemandCount }}
                         </span>
                         <span v-if="unknownConsumptionCount > 0" class="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
-                            Unknown consumption: {{ unknownConsumptionCount }}
+                            Consumption review: {{ unknownConsumptionCount }}
                         </span>
                         <span v-if="unknownDemandCount > 0" class="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
-                            Unknown demand: {{ unknownDemandCount }}
+                            Demand review: {{ unknownDemandCount }}
                         </span>
                         <span v-if="missingIntervalCount > 0" class="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
                             Missing intervals: {{ missingIntervalCount }}
