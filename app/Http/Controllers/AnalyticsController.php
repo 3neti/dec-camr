@@ -20,8 +20,8 @@ final class AnalyticsController extends Controller
             'title' => 'Analytics Workbench',
             'subtitle' => 'Investigate historical consumption, demand, comparison, and load-profile evidence without replacing Reports.',
             'status' => [
-                'label' => 'Contracts Wired',
-                'description' => 'The workbench shell now receives real analytics contract data. AN-018 will compose the full visual workspace.',
+                'label' => 'Workspace Composed',
+                'description' => 'The workbench now composes real analytics contract data into the first visible historical analysis workspace.',
             ],
             'workbenchSections' => [
                 [

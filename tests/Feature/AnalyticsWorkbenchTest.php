@@ -22,7 +22,7 @@ test('analytics workbench shell renders through inertia when loginID exists', fu
         ->assertInertia(fn (Assert $page) => $page
             ->component('Analytics')
             ->where('title', 'Analytics Workbench')
-            ->where('status.label', 'Contracts Wired')
+            ->where('status.label', 'Workspace Composed')
             ->where('workbenchSections.0.id', 'consumption')
             ->where('workbenchSections.1.id', 'demand')
             ->where('workbenchSections.2.id', 'building-comparison')
@@ -47,7 +47,7 @@ test('analytics workbench receives real contract data from analytics demo scenar
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Analytics')
-            ->where('status.label', 'Contracts Wired')
+            ->where('status.label', 'Workspace Composed')
             ->where('analyticsContext.hasData', true)
             ->where('analyticsContext.grain', 'hourly')
             ->where('emptyState.kind', 'missing-filter')

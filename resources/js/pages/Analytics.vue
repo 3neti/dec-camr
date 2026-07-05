@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import AnalyticsEmptyState from '@/components/analytics/AnalyticsEmptyState.vue';
+import BuildingComparisonGrid from '@/components/analytics/BuildingComparisonGrid.vue';
+import ConsumptionSummaryCard from '@/components/analytics/ConsumptionSummaryCard.vue';
+import ConsumptionTrend from '@/components/analytics/ConsumptionTrend.vue';
+import DemandCurve from '@/components/analytics/DemandCurve.vue';
+import LoadProfileExplorer from '@/components/analytics/LoadProfileExplorer.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import ScopePill from '@/components/operator/ScopePill.vue';
 import StatusChip from '@/components/operator/StatusChip.vue';
@@ -35,6 +41,78 @@ type ContractEvidence = {
 };
 
 type EmptyStateKind = 'missing-filter' | 'no-data' | 'incomplete-data' | 'unsupported-grain';
+type TrustLevel = 'Measured' | 'Calculated' | 'Estimated' | 'Incomplete' | 'Unknown';
+
+type DataTrustIndicator = {
+    level: TrustLevel;
+    reason?: string;
+    missingIntervalCount?: number;
+    warning?: string | null;
+};
+
+type ConsumptionSeriesPoint = {
+    periodStart: string;
+    periodEnd: string;
+    grain: string;
+    kwhTotal: number | null;
+    confidence: {
+        level: TrustLevel;
+        reason?: string;
+    };
+    missingData?: {
+        missingIntervalCount?: number;
+        missingStartReading?: boolean;
+        missingEndReading?: boolean;
+    };
+};
+
+type DemandSeriesPoint = {
+    periodStart: string;
+    periodEnd: string;
+    grain: string;
+    kwDemand: number | null;
+    elapsedMinutes?: number | null;
+    peakMarker?: {
+        isPeak?: boolean;
+        peakKwDemand?: number | null;
+    };
+    confidence: {
+        level: TrustLevel;
+        reason?: string;
+    };
+    missingData?: {
+        missingIntervalCount?: number;
+        missingMinReading?: boolean;
+        missingMaxReading?: boolean;
+    };
+};
+
+type BuildingConsumptionSummary = {
+    buildingId: number;
+    buildingCode: string;
+    buildingName: string;
+    site?: {
+        siteId?: number | null;
+        siteCode?: string | null;
+    };
+    totalKwh: number;
+    meterCount: number;
+    seriesPointCount: number;
+    missingData: {
+        missingIntervalCount: number;
+        incompleteSeriesPointCount: number;
+        unknownSeriesPointCount: number;
+    };
+    comparison?: {
+        rankBasis?: string;
+        isTopConsumer?: boolean;
+        topConsumerKwh?: number | null;
+    };
+    confidence: {
+        level: TrustLevel;
+        reason?: string;
+    };
+};
 
 const props = defineProps<{
     title: string;
@@ -48,9 +126,9 @@ const props = defineProps<{
     analyticsContext: AnalyticsContext;
     contractEvidence: ContractEvidence;
     contractData: {
-        consumptionPoints: unknown[];
-        demandPoints: unknown[];
-        buildingSummaries: unknown[];
+        consumptionPoints: ConsumptionSeriesPoint[];
+        demandPoints: DemandSeriesPoint[];
+        buildingSummaries: BuildingConsumptionSummary[];
     };
     emptyState: {
         kind: EmptyStateKind;
@@ -62,7 +140,7 @@ const props = defineProps<{
     };
 }>();
 
-const evidenceCards = [
+const evidenceCards = computed(() => [
     {
         label: 'Consumption Points',
         value: props.contractEvidence.consumptionPointCount,
@@ -83,7 +161,62 @@ const evidenceCards = [
         value: props.contractEvidence.incompleteCount + props.contractEvidence.unknownCount,
         detail: `${props.contractEvidence.incompleteCount} incomplete / ${props.contractEvidence.unknownCount} unknown`,
     },
-];
+]);
+
+const calculatedConsumptionPoints = computed(() => props.contractData.consumptionPoints.filter((point) => point.confidence.level === 'Calculated' && typeof point.kwhTotal === 'number'));
+const calculatedDemandPoints = computed(() => props.contractData.demandPoints.filter((point) => point.confidence.level === 'Calculated' && typeof point.kwDemand === 'number'));
+const totalConsumption = computed(() => calculatedConsumptionPoints.value.reduce((total, point) => total + (point.kwhTotal ?? 0), 0));
+const peakDemand = computed(() => calculatedDemandPoints.value.reduce<number | null>((peak, point) => {
+    if (point.kwDemand === null) {
+        return peak;
+    }
+
+    return peak === null || point.kwDemand > peak ? point.kwDemand : peak;
+}, null));
+const topBuilding = computed(() => props.contractData.buildingSummaries[0] ?? null);
+const workspaceTrust = computed<DataTrustIndicator>(() => {
+    if (!props.analyticsContext.hasData) {
+        return {
+            level: 'Incomplete',
+            reason: 'No analytics telemetry context is available for this workspace.',
+            missingIntervalCount: props.emptyState.missingIntervalCount,
+            warning: 'Run the analytics demo scenario before reviewing the workspace.',
+        };
+    }
+
+    if (props.contractEvidence.incompleteCount > 0) {
+        return {
+            level: 'Incomplete',
+            reason: 'The selected window contains incomplete analytical evidence.',
+            missingIntervalCount: props.emptyState.missingIntervalCount,
+            warning: 'Review missing intervals before treating this as final evidence.',
+        };
+    }
+
+    if (props.contractEvidence.unknownCount > 0) {
+        return {
+            level: 'Unknown',
+            reason: 'The selected window contains zero-delta or non-informative analytical evidence.',
+            missingIntervalCount: props.emptyState.missingIntervalCount,
+            warning: 'Some values require interpretation before comparison.',
+        };
+    }
+
+    return {
+        level: 'Calculated',
+        reason: 'Workspace evidence is calculated from the selected analytics contracts.',
+        missingIntervalCount: props.emptyState.missingIntervalCount,
+        warning: null,
+    };
+});
+
+const formatNumber = (value: number | null) => {
+    if (value === null) {
+        return null;
+    }
+
+    return Number(value.toFixed(2));
+};
 </script>
 
 <template>
@@ -108,7 +241,7 @@ const evidenceCards = [
                             </CardDescription>
                         </div>
 
-                        <StatusChip label="AN-017" tone="success" />
+                        <StatusChip label="AN-018" tone="success" />
                     </div>
                 </CardHeader>
 
@@ -170,7 +303,90 @@ const evidenceCards = [
                         </article>
                     </div>
 
+                    <div v-if="props.analyticsContext.hasData" class="space-y-5">
+                        <div class="grid gap-5 xl:grid-cols-3">
+                            <ConsumptionSummaryCard
+                                class="xl:col-span-1"
+                                title="Selected Window Consumption"
+                                :value="formatNumber(totalConsumption)"
+                                :period-label="props.analyticsContext.periodLabel"
+                                :confidence="workspaceTrust"
+                                :comparison="{
+                                    label: 'Top Building',
+                                    value: topBuilding?.buildingCode ?? 'Unavailable',
+                                    direction: 'none',
+                                    context: topBuilding ? `${topBuilding.totalKwh} kWh calculated` : 'No ranked building summary',
+                                }"
+                                caption="Total calculated consumption for the selected meter and analytical window."
+                                source-label="ConsumptionSeriesPoint"
+                            />
+
+                            <ConsumptionSummaryCard
+                                title="Peak Demand"
+                                :value="formatNumber(peakDemand)"
+                                unit="kW"
+                                :period-label="props.analyticsContext.periodLabel"
+                                :confidence="workspaceTrust"
+                                :comparison="{
+                                    label: 'Demand Evidence',
+                                    value: props.contractEvidence.demandPointCount,
+                                    direction: 'none',
+                                    context: `${props.contractEvidence.calculatedDemandCount} calculated demand points`,
+                                }"
+                                caption="Highest calculated demand observed in the selected window."
+                                source-label="DemandSeriesPoint"
+                            />
+
+                            <ConsumptionSummaryCard
+                                title="Building Comparison"
+                                :value="formatNumber(topBuilding?.totalKwh ?? null)"
+                                :period-label="props.analyticsContext.periodLabel"
+                                :confidence="workspaceTrust"
+                                :comparison="{
+                                    label: 'Compared Buildings',
+                                    value: props.contractEvidence.buildingSummaryCount,
+                                    direction: 'none',
+                                    context: topBuilding?.buildingCode ? `${topBuilding.buildingCode} is currently ranked first` : 'No building comparison available',
+                                }"
+                                caption="Highest building consumption summary for this analytical window."
+                                source-label="BuildingConsumptionSummary"
+                            />
+                        </div>
+
+                        <div class="grid gap-5 xl:grid-cols-2">
+                            <ConsumptionTrend
+                                :points="props.contractData.consumptionPoints"
+                                title="Consumption Trend"
+                                description="Hourly consumption series for the selected analytical context."
+                            />
+                            <DemandCurve
+                                :points="props.contractData.demandPoints"
+                                title="Demand Curve"
+                                description="Hourly demand series with peak markers for the selected analytical context."
+                            />
+                        </div>
+
+                        <BuildingComparisonGrid
+                            :summaries="props.contractData.buildingSummaries"
+                            title="Building Comparison"
+                            description="Ranked building consumption summaries for the same selected analytical window."
+                        />
+
+                        <LoadProfileExplorer
+                            :context="{
+                                meterName: props.analyticsContext.meterIdentifier,
+                                buildingCode: props.analyticsContext.buildingCode,
+                                siteCode: props.analyticsContext.siteCode,
+                                grain: props.analyticsContext.grain,
+                                periodLabel: props.analyticsContext.periodLabel,
+                            }"
+                            :consumption-points="props.contractData.consumptionPoints"
+                            :demand-points="props.contractData.demandPoints"
+                        />
+                    </div>
+
                     <AnalyticsEmptyState
+                        v-else
                         :kind="props.emptyState.kind"
                         :title="props.emptyState.title"
                         :description="props.emptyState.description"
@@ -179,10 +395,8 @@ const evidenceCards = [
                         :missing-interval-count="props.emptyState.missingIntervalCount"
                         :recommended-actions="[
                             {
-                                label: props.analyticsContext.hasData ? 'Compose workspace' : 'Prepare showcase data',
-                                description: props.analyticsContext.hasData
-                                    ? 'AN-018 can now mount summary cards, trend, demand, comparison, and load-profile components.'
-                                    : 'Run php artisan camr:scenario analytics-demo before visual review.',
+                                label: 'Prepare showcase data',
+                                description: 'Run php artisan camr:scenario analytics-demo before visual review.',
                             },
                             {
                                 label: 'Preserve Reports',
