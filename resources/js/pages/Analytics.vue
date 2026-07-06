@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import AnalyticsController from '@/actions/App/Http/Controllers/AnalyticsController';
 import {
     consumptionReport,
     demandReport,
@@ -13,6 +15,7 @@ import ConsumptionSummaryCard from '@/components/analytics/ConsumptionSummaryCar
 import ConsumptionTrend from '@/components/analytics/ConsumptionTrend.vue';
 import DemandCurve from '@/components/analytics/DemandCurve.vue';
 import LoadProfileExplorer from '@/components/analytics/LoadProfileExplorer.vue';
+import TimeRangePicker from '@/components/analytics/TimeRangePicker.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import ScopePill from '@/components/operator/ScopePill.vue';
 import StatusChip from '@/components/operator/StatusChip.vue';
@@ -34,6 +37,23 @@ type AnalyticsContext = {
     to: string | null;
     periodLabel: string;
     grain: string;
+};
+
+type TimeRangePreset = {
+    key: string;
+    label: string;
+    from: string;
+    to: string;
+    description?: string;
+};
+
+type TimeRangeControls = {
+    from: string;
+    to: string;
+    min: string;
+    max: string;
+    timezoneLabel: string;
+    presets: TimeRangePreset[];
 };
 
 type ContractEvidence = {
@@ -145,6 +165,7 @@ const props = defineProps<{
     workbenchSections: WorkbenchSection[];
     readinessChecklist: string[];
     analyticsContext: AnalyticsContext;
+    timeRangeControls: TimeRangeControls;
     contractEvidence: ContractEvidence;
     contractData: {
         consumptionPoints: ConsumptionSeriesPoint[];
@@ -160,6 +181,17 @@ const props = defineProps<{
         missingIntervalCount: number;
     };
 }>();
+
+const selectedFrom = ref(props.timeRangeControls.from);
+const selectedTo = ref(props.timeRangeControls.to);
+
+watch(
+    () => props.timeRangeControls,
+    (controls) => {
+        selectedFrom.value = controls.from;
+        selectedTo.value = controls.to;
+    },
+);
 
 const evidenceCards = computed(() => [
     {
@@ -207,6 +239,23 @@ const exportPanelActions = computed(() => props.exportPanel.actions.map((action)
     href: reportUrls[action.reportFamily],
     primary: action.reportFamily === 'consumption',
 })));
+
+const applyTimeRange = (payload: { from: string; to: string; timezoneLabel: string; valid: boolean }) => {
+    if (!payload.valid) {
+        return;
+    }
+
+    router.visit(AnalyticsController.url({
+        query: {
+            from: payload.from,
+            to: payload.to,
+        },
+    }), {
+        method: 'get',
+        preserveScroll: true,
+        preserveState: false,
+    });
+};
 
 const calculatedConsumptionPoints = computed(() => props.contractData.consumptionPoints.filter((point) => point.confidence.level === 'Calculated' && typeof point.kwhTotal === 'number'));
 const calculatedDemandPoints = computed(() => props.contractData.demandPoints.filter((point) => point.confidence.level === 'Calculated' && typeof point.kwDemand === 'number'));
@@ -333,6 +382,21 @@ const summaryTrust = computed(() => ({
                             tone="neutral"
                         />
                     </div>
+
+                    <TimeRangePicker
+                        v-model:from="selectedFrom"
+                        v-model:to="selectedTo"
+                        :timezone-label="props.timeRangeControls.timezoneLabel"
+                        :min="props.timeRangeControls.min"
+                        :max="props.timeRangeControls.max"
+                        title="Investigation Window"
+                        description="Choose the historical date range that should drive every analytics contract on this page."
+                        from-label="Start date"
+                        to-label="End date"
+                        :presets="props.timeRangeControls.presets"
+                        :disabled="!props.analyticsContext.hasData"
+                        @change="applyTimeRange"
+                    />
 
                     <dl class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <div

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Analytics;
 
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Support\Facades\DB;
 
 final class BuildAnalyticsWorkbenchDataAction
@@ -18,9 +19,9 @@ final class BuildAnalyticsWorkbenchDataAction
     /**
      * @return array<string, mixed>
      */
-    public function execute(): array
+    public function execute(?string $fromDate = null, ?string $toDate = null): array
     {
-        $context = $this->defaultContext();
+        $context = $this->defaultContext($fromDate, $toDate);
 
         if ($context === null) {
             return [
@@ -33,6 +34,14 @@ final class BuildAnalyticsWorkbenchDataAction
                     'to' => null,
                     'periodLabel' => 'No telemetry window available',
                     'grain' => 'hourly',
+                ],
+                'timeRangeControls' => [
+                    'from' => '',
+                    'to' => '',
+                    'min' => '',
+                    'max' => '',
+                    'timezoneLabel' => config('app.timezone', 'UTC'),
+                    'presets' => [],
                 ],
                 'contractData' => [
                     'consumptionPoints' => [],
@@ -79,6 +88,14 @@ final class BuildAnalyticsWorkbenchDataAction
                 'periodLabel' => sprintf('%s to %s', $context['from']->toDateTimeString(), $context['to']->toDateTimeString()),
                 'grain' => 'hourly',
             ],
+            'timeRangeControls' => [
+                'from' => $context['from']->toDateString(),
+                'to' => $context['to']->toDateString(),
+                'min' => $context['availableFrom']->toDateString(),
+                'max' => $context['availableTo']->toDateString(),
+                'timezoneLabel' => config('app.timezone', 'UTC'),
+                'presets' => $this->timeRangePresets($context),
+            ],
             'contractData' => [
                 'consumptionPoints' => $consumptionPoints,
                 'demandPoints' => $demandPoints,
@@ -97,9 +114,9 @@ final class BuildAnalyticsWorkbenchDataAction
     }
 
     /**
-     * @return array{meterIdentifier: string, buildingCode: string, siteCode: string|null, from: CarbonImmutable, to: CarbonImmutable}|null
+     * @return array{meterIdentifier: string, buildingCode: string, siteCode: string|null, from: CarbonImmutable, to: CarbonImmutable, availableFrom: CarbonImmutable, availableTo: CarbonImmutable}|null
      */
-    private function defaultContext(): ?array
+    private function defaultContext(?string $fromDate = null, ?string $toDate = null): ?array
     {
         $row = DB::table('meter_data')
             ->join('meter_details', function ($join): void {
@@ -110,6 +127,7 @@ final class BuildAnalyticsWorkbenchDataAction
             ->whereRaw('UPPER(meter_details.meter_status) = ?', ['ACTIVE'])
             ->whereColumn('meter_data.location', 'meter_building_table.building_code')
             ->select([
+                'meter_details.meter_id',
                 'meter_details.meter_name',
                 'meter_details.site_code',
                 'meter_building_table.building_code',
@@ -124,9 +142,27 @@ final class BuildAnalyticsWorkbenchDataAction
             return null;
         }
 
+        $bounds = DB::table('meter_data')
+            ->whereIn('meter_id', [(string) $row->meter_name, (string) $row->meter_id])
+            ->where('location', (string) $row->building_code)
+            ->selectRaw('MIN(datetime) as earliest_datetime, MAX(datetime) as latest_datetime')
+            ->first();
+
+        $availableFrom = CarbonImmutable::parse((string) ($bounds->earliest_datetime ?? $row->latest_datetime))->startOfDay();
+        $availableTo = CarbonImmutable::parse((string) ($bounds->latest_datetime ?? $row->latest_datetime))->endOfDay();
         $latest = CarbonImmutable::parse((string) $row->latest_datetime);
         $from = $latest->startOfDay();
         $to = $latest->startOfHour();
+
+        if ($fromDate !== null && $toDate !== null && $fromDate !== '' && $toDate !== '') {
+            $selectedFrom = $this->parseDateBoundary($fromDate);
+            $selectedTo = $this->parseDateBoundary($toDate, endOfDay: true);
+
+            if ($selectedFrom !== null && $selectedTo !== null && $selectedFrom->lessThanOrEqualTo($selectedTo)) {
+                $from = $selectedFrom;
+                $to = $selectedTo;
+            }
+        }
 
         if ($to->lessThan($from)) {
             $to = $from;
@@ -138,6 +174,47 @@ final class BuildAnalyticsWorkbenchDataAction
             'siteCode' => $row->site_code !== null ? (string) $row->site_code : null,
             'from' => $from,
             'to' => $to,
+            'availableFrom' => $availableFrom,
+            'availableTo' => $availableTo,
+        ];
+    }
+
+    private function parseDateBoundary(string $value, bool $endOfDay = false): ?CarbonImmutable
+    {
+        try {
+            $date = CarbonImmutable::parse($value);
+        } catch (InvalidFormatException) {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
+            return $endOfDay ? $date->endOfDay() : $date->startOfDay();
+        }
+
+        return $date;
+    }
+
+    /**
+     * @param  array{meterIdentifier: string, buildingCode: string, siteCode: string|null, from: CarbonImmutable, to: CarbonImmutable, availableFrom: CarbonImmutable, availableTo: CarbonImmutable}  $context
+     * @return list<array{key: string, label: string, from: string, to: string, description: string}>
+     */
+    private function timeRangePresets(array $context): array
+    {
+        return [
+            [
+                'key' => 'selected-day',
+                'label' => 'Selected day',
+                'from' => $context['from']->toDateString(),
+                'to' => $context['from']->toDateString(),
+                'description' => 'Review the current investigation day.',
+            ],
+            [
+                'key' => 'available-window',
+                'label' => 'All telemetry',
+                'from' => $context['availableFrom']->toDateString(),
+                'to' => $context['availableTo']->toDateString(),
+                'description' => 'Review the full available telemetry range for this context.',
+            ],
         ];
     }
 

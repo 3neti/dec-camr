@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Analytics\BuildAnalyticsWorkbenchDataAction;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,7 +15,7 @@ final class AnalyticsController extends Controller
         private readonly BuildAnalyticsWorkbenchDataAction $buildAnalyticsWorkbenchData,
     ) {}
 
-    public function __invoke(): Response
+    public function __invoke(Request $request): Response
     {
         return Inertia::render('Analytics', [
             'title' => 'Analytics Workbench',
@@ -85,7 +86,10 @@ final class AnalyticsController extends Controller
                 ],
                 'preservationNote' => 'Analytics explains evidence. Reports remain the approved workflow for formal XLSX and workbook exports.',
             ],
-            ...$this->buildAnalyticsWorkbenchData->execute(),
+            ...$this->buildAnalyticsWorkbenchData->execute(
+                fromDate: $request->string('from')->toString(),
+                toDate: $request->string('to')->toString(),
+            ),
         ]);
     }
 }

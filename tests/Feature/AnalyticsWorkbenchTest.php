@@ -33,6 +33,8 @@ test('analytics workbench shell renders through inertia when loginID exists', fu
             ->where('readinessChecklist.0', 'Run php artisan camr:scenario analytics-demo for deterministic showcase data.')
             ->where('analyticsContext.hasData', false)
             ->where('analyticsContext.periodLabel', 'No telemetry window available')
+            ->where('timeRangeControls.from', '')
+            ->where('timeRangeControls.presets', [])
             ->where('contractEvidence.consumptionPointCount', 0)
             ->where('contractEvidence.demandPointCount', 0)
             ->where('contractEvidence.buildingSummaryCount', 0)
@@ -54,6 +56,9 @@ test('analytics workbench receives real contract data from analytics demo scenar
             ->where('exportPanel.preservationNote', 'Analytics explains evidence. Reports remain the approved workflow for formal XLSX and workbook exports.')
             ->where('analyticsContext.hasData', true)
             ->where('analyticsContext.grain', 'hourly')
+            ->where('timeRangeControls.timezoneLabel', config('app.timezone'))
+            ->where('timeRangeControls.presets.0.key', 'selected-day')
+            ->where('timeRangeControls.presets.1.key', 'available-window')
             ->where('emptyState.kind', 'missing-filter')
             ->has('contractData.consumptionPoints')
             ->has('contractData.demandPoints')
@@ -63,7 +68,55 @@ test('analytics workbench receives real contract data from analytics demo scenar
         ->and($response->inertiaProps('contractEvidence.demandPointCount'))->toBeGreaterThan(0)
         ->and($response->inertiaProps('contractEvidence.calculatedConsumptionCount'))->toBeGreaterThan(0)
         ->and($response->inertiaProps('contractEvidence.calculatedDemandCount'))->toBeGreaterThan(0)
-        ->and($response->inertiaProps('contractEvidence.buildingSummaryCount'))->toBeGreaterThan(0);
+        ->and($response->inertiaProps('contractEvidence.buildingSummaryCount'))->toBeGreaterThan(0)
+        ->and($response->inertiaProps('timeRangeControls.from'))->toBe(CarbonImmutable::parse($response->inertiaProps('analyticsContext.from'))->toDateString())
+        ->and($response->inertiaProps('timeRangeControls.to'))->toBe(CarbonImmutable::parse($response->inertiaProps('analyticsContext.to'))->toDateString());
+});
+
+test('analytics workbench selected query window drives every contract', function () {
+    $user = User::factory()->create();
+
+    $this->artisan('camr:scenario analytics-demo')
+        ->assertSuccessful();
+
+    $defaultResponse = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics')
+        ->assertOk();
+    $selectedDate = (string) $defaultResponse->inertiaProps('timeRangeControls.from');
+
+    $response = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics?from='.$selectedDate.'&to='.$selectedDate)
+        ->assertOk();
+
+    $from = CarbonImmutable::parse($selectedDate)->startOfDay();
+    $to = CarbonImmutable::parse($selectedDate)->endOfDay();
+    $meterIdentifier = (string) $response->inertiaProps('analyticsContext.meterIdentifier');
+    $buildingCode = (string) $response->inertiaProps('analyticsContext.buildingCode');
+
+    $expectedConsumptionPoints = app(BuildConsumptionSeriesAction::class)->execute(
+        meterIdentifier: $meterIdentifier,
+        buildingCode: $buildingCode,
+        from: $from,
+        to: $to,
+    );
+    $expectedDemandPoints = app(BuildDemandSeriesAction::class)->execute(
+        meterIdentifier: $meterIdentifier,
+        buildingCode: $buildingCode,
+        from: $from,
+        to: $to,
+    );
+    $expectedBuildingSummaries = app(BuildBuildingConsumptionSummaryAction::class)->execute(
+        from: $from,
+        to: $to,
+    );
+
+    expect(CarbonImmutable::parse($response->inertiaProps('analyticsContext.from'))->toDateTimeString())->toBe($from->toDateTimeString())
+        ->and(CarbonImmutable::parse($response->inertiaProps('analyticsContext.to'))->toDateTimeString())->toBe($to->toDateTimeString())
+        ->and($response->inertiaProps('timeRangeControls.from'))->toBe($selectedDate)
+        ->and($response->inertiaProps('timeRangeControls.to'))->toBe($selectedDate)
+        ->and($response->inertiaProps('contractData.consumptionPoints'))->toEqual($expectedConsumptionPoints)
+        ->and($response->inertiaProps('contractData.demandPoints'))->toEqual($expectedDemandPoints)
+        ->and($response->inertiaProps('contractData.buildingSummaries'))->toEqual($expectedBuildingSummaries);
 });
 
 test('analytics workbench contract data uses one selected analytical window', function () {
