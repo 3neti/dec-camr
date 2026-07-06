@@ -5,6 +5,7 @@ use App\Actions\Analytics\BuildConsumptionSeriesAction;
 use App\Actions\Analytics\BuildDemandSeriesAction;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('analytics workbench requires legacy login session', function () {
@@ -46,7 +47,7 @@ test('analytics workbench shell renders through inertia when loginID exists', fu
 });
 
 test('analytics workbench receives real contract data from analytics demo scenario', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $this->artisan('camr:scenario analytics-demo')
         ->assertSuccessful();
@@ -82,7 +83,7 @@ test('analytics workbench receives real contract data from analytics demo scenar
 });
 
 test('analytics workbench selected building and meter query drives context contracts', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $this->artisan('camr:scenario analytics-demo')
         ->assertSuccessful();
@@ -133,7 +134,7 @@ test('analytics workbench selected building and meter query drives context contr
 });
 
 test('analytics workbench selected query window drives every contract', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $this->artisan('camr:scenario analytics-demo')
         ->assertSuccessful();
@@ -179,7 +180,7 @@ test('analytics workbench selected query window drives every contract', function
 });
 
 test('analytics workbench contract data uses one selected analytical window', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
 
     $this->artisan('camr:scenario analytics-demo')
         ->assertSuccessful();
@@ -213,6 +214,58 @@ test('analytics workbench contract data uses one selected analytical window', fu
     expect($response->inertiaProps('contractData.consumptionPoints'))->toEqual($expectedConsumptionPoints)
         ->and($response->inertiaProps('contractData.demandPoints'))->toEqual($expectedDemandPoints)
         ->and($response->inertiaProps('contractData.buildingSummaries'))->toEqual($expectedBuildingSummaries);
+});
+
+test('analytics workbench honors scoped user site access for context options and summaries', function () {
+    $scopedUser = User::factory()->create([
+        'name' => 'analytics-scoped',
+        'user_type' => 'User',
+        'user_access' => 'Selected',
+    ]);
+    $admin = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
+
+    $this->artisan('camr:scenario analytics-demo')
+        ->assertSuccessful();
+
+    $adminResponse = $this->withSession(['loginID' => $admin->id])
+        ->get('/analytics')
+        ->assertOk();
+
+    $summaries = collect($adminResponse->inertiaProps('contractData.buildingSummaries'))
+        ->filter(fn (array $summary): bool => isset($summary['site']['siteId']))
+        ->values();
+
+    if ($summaries->count() < 2) {
+        $this->markTestSkipped('Analytics demo scenario needs at least two site-backed building summaries for scoped access coverage.');
+    }
+
+    $allowedSummary = $summaries->first();
+    $blockedSummary = $summaries->first(fn (array $summary): bool => (int) $summary['site']['siteId'] !== (int) $allowedSummary['site']['siteId']);
+
+    if ($blockedSummary === null) {
+        $this->markTestSkipped('Analytics demo scenario needs building summaries across multiple sites for scoped access coverage.');
+    }
+
+    DB::table('user_access_group')->insert([
+        'user_idx' => (string) $scopedUser->id,
+        'user_name' => $scopedUser->name,
+        'site_idx' => (int) $allowedSummary['site']['siteId'],
+        'created_by_user_idx' => $admin->id,
+        'access_list_src' => 'CAMR',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $response = $this->withSession(['loginID' => $scopedUser->id])
+        ->get('/analytics?building='.$blockedSummary['buildingCode'])
+        ->assertOk();
+
+    expect($response->inertiaProps('analyticsContext.hasData'))->toBeTrue()
+        ->and($response->inertiaProps('analyticsContext.buildingCode'))->not->toBe($blockedSummary['buildingCode'])
+        ->and(collect($response->inertiaProps('contextControls.buildingOptions'))
+            ->contains(fn (array $option): bool => $option['value'] === $blockedSummary['buildingCode']))->toBeFalse()
+        ->and(collect($response->inertiaProps('contractData.buildingSummaries'))
+            ->every(fn (array $summary): bool => (int) ($summary['site']['siteId'] ?? 0) === (int) $allowedSummary['site']['siteId']))->toBeTrue();
 });
 
 test('analytics appears in operator shell navigation without replacing reports', function () {

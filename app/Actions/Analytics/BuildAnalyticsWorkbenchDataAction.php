@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Analytics;
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Support\Collection;
@@ -25,8 +26,10 @@ final class BuildAnalyticsWorkbenchDataAction
         ?string $toDate = null,
         ?string $buildingCode = null,
         ?string $meterIdentifier = null,
+        ?User $legacyUser = null,
     ): array {
-        $contexts = $this->availableContexts();
+        $allowedSiteIds = $this->allowedSiteIds($legacyUser);
+        $contexts = $this->availableContexts($allowedSiteIds);
         $context = $this->defaultContext($contexts, $fromDate, $toDate, $buildingCode, $meterIdentifier);
 
         if ($context === null) {
@@ -87,6 +90,7 @@ final class BuildAnalyticsWorkbenchDataAction
         $buildingSummaries = $this->buildingConsumptionSummary->execute(
             from: $context['from'],
             to: $context['to'],
+            siteIds: $allowedSiteIds,
         );
 
         return [
@@ -132,34 +136,42 @@ final class BuildAnalyticsWorkbenchDataAction
     }
 
     /**
-     * @return Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>
+     * @param  list<int>|null  $siteIds
+     * @return Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_idx: int|string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>
      */
-    private function availableContexts(): Collection
+    private function availableContexts(?array $siteIds): Collection
     {
-        return DB::table('meter_data')
+        $query = DB::table('meter_data')
             ->join('meter_details', function ($join): void {
                 $join->on('meter_data.meter_id', '=', 'meter_details.meter_id')
                     ->orOn('meter_data.meter_id', '=', 'meter_details.meter_name');
             })
             ->join('meter_building_table', 'meter_details.building_idx', '=', 'meter_building_table.building_id')
+            ->leftJoin('meter_site', 'meter_building_table.site_idx', '=', 'meter_site.site_id')
             ->whereRaw('UPPER(meter_details.meter_status) = ?', ['ACTIVE'])
             ->whereColumn('meter_data.location', 'meter_building_table.building_code')
             ->select([
                 'meter_details.meter_id',
                 'meter_details.meter_name',
-                'meter_details.site_code',
+                'meter_building_table.site_idx',
+                'meter_site.site_code',
                 'meter_building_table.building_code',
                 DB::raw('MIN(meter_data.datetime) as earliest_datetime'),
                 DB::raw('MAX(meter_data.datetime) as latest_datetime'),
             ])
-            ->groupBy('meter_details.meter_id', 'meter_details.meter_name', 'meter_details.site_code', 'meter_building_table.building_code')
+            ->groupBy('meter_details.meter_id', 'meter_details.meter_name', 'meter_building_table.site_idx', 'meter_site.site_code', 'meter_building_table.building_code')
             ->orderByDesc('latest_datetime')
-            ->orderBy('meter_details.meter_name')
-            ->get();
+            ->orderBy('meter_details.meter_name');
+
+        if ($siteIds !== null) {
+            $query->whereIn('meter_building_table.site_idx', $siteIds);
+        }
+
+        return $query->get();
     }
 
     /**
-     * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
+     * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_idx: int|string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
      * @return array{meterIdentifier: string, buildingCode: string, siteCode: string|null, from: CarbonImmutable, to: CarbonImmutable, availableFrom: CarbonImmutable, availableTo: CarbonImmutable}|null
      */
     private function defaultContext(
@@ -207,8 +219,8 @@ final class BuildAnalyticsWorkbenchDataAction
     }
 
     /**
-     * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
-     * @return object{meter_id: int|string|null, meter_name: string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}|null
+     * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_idx: int|string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
+     * @return object{meter_id: int|string|null, meter_name: string|null, site_idx: int|string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}|null
      */
     private function selectedContextRow(Collection $contexts, ?string $buildingCode, ?string $meterIdentifier): ?object
     {
@@ -235,7 +247,7 @@ final class BuildAnalyticsWorkbenchDataAction
     }
 
     /**
-     * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
+     * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_idx: int|string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
      * @return list<array{value: string, label: string, description: string}>
      */
     private function buildingOptions(Collection $contexts): array
@@ -252,7 +264,7 @@ final class BuildAnalyticsWorkbenchDataAction
     }
 
     /**
-     * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
+     * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_idx: int|string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
      * @return list<array{value: string, label: string, description: string, buildingCode: string}>
      */
     private function meterOptions(Collection $contexts, string $buildingCode): array
@@ -265,6 +277,28 @@ final class BuildAnalyticsWorkbenchDataAction
                 'description' => sprintf('Site %s / numeric ID %s', $row->site_code ?? 'unassigned', $row->meter_id ?? 'unknown'),
                 'buildingCode' => $buildingCode,
             ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<int>|null
+     */
+    private function allowedSiteIds(?User $legacyUser): ?array
+    {
+        if (! $legacyUser instanceof User) {
+            return [];
+        }
+
+        if ($legacyUser->hasFullSiteAccess()) {
+            return null;
+        }
+
+        return DB::table('user_access_group')
+            ->where('user_idx', (string) $legacyUser->id)
+            ->pluck('site_idx')
+            ->map(fn (mixed $siteId): int => (int) $siteId)
+            ->unique()
             ->values()
             ->all();
     }

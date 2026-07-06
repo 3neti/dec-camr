@@ -24,8 +24,9 @@ final class BuildBuildingConsumptionSummaryAction
         CarbonInterface $from,
         CarbonInterface $to,
         ConsumptionSeriesGrain|string $grain = ConsumptionSeriesGrain::Hourly,
+        ?array $siteIds = null,
     ): array {
-        $summaries = Building::query()
+        $query = Building::query()
             ->leftJoin('meter_site', 'meter_building_table.site_idx', '=', 'meter_site.site_id')
             ->select([
                 'meter_building_table.building_id',
@@ -34,7 +35,13 @@ final class BuildBuildingConsumptionSummaryAction
                 'meter_building_table.site_idx',
                 'meter_site.site_code',
             ])
-            ->orderBy('meter_building_table.building_code')
+            ->orderBy('meter_building_table.building_code');
+
+        if ($siteIds !== null) {
+            $query->whereIn('meter_building_table.site_idx', $siteIds);
+        }
+
+        $summaries = $query
             ->get()
             ->map(function (object $building) use ($from, $to, $grain): BuildingConsumptionSummary {
                 $meters = Meter::query()

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Analytics\BuildAnalyticsWorkbenchDataAction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -91,6 +92,7 @@ final class AnalyticsController extends Controller
                 toDate: $request->string('to')->toString(),
                 buildingCode: $request->string('building')->toString(),
                 meterIdentifier: $request->string('meter')->toString(),
+                legacyUser: User::query()->find((int) $request->session()->get('loginID')),
             ),
         ]);
     }
