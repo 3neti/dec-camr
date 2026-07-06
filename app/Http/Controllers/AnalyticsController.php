@@ -89,6 +89,8 @@ final class AnalyticsController extends Controller
             ...$this->buildAnalyticsWorkbenchData->execute(
                 fromDate: $request->string('from')->toString(),
                 toDate: $request->string('to')->toString(),
+                buildingCode: $request->string('building')->toString(),
+                meterIdentifier: $request->string('meter')->toString(),
             ),
         ]);
     }

@@ -8,6 +8,7 @@ import {
     rawReport,
     siteReport,
 } from '@/actions/App/Http/Controllers/ReportController';
+import AnalyticsContextSelector from '@/components/analytics/AnalyticsContextSelector.vue';
 import AnalyticsEmptyState from '@/components/analytics/AnalyticsEmptyState.vue';
 import AnalyticsExportPanel from '@/components/analytics/AnalyticsExportPanel.vue';
 import BuildingComparisonGrid from '@/components/analytics/BuildingComparisonGrid.vue';
@@ -54,6 +55,22 @@ type TimeRangeControls = {
     max: string;
     timezoneLabel: string;
     presets: TimeRangePreset[];
+};
+
+type ContextControls = {
+    buildingCode: string;
+    meterIdentifier: string;
+    buildingOptions: {
+        value: string;
+        label: string;
+        description: string;
+    }[];
+    meterOptions: {
+        value: string;
+        label: string;
+        description: string;
+        buildingCode: string;
+    }[];
 };
 
 type ContractEvidence = {
@@ -166,6 +183,7 @@ const props = defineProps<{
     readinessChecklist: string[];
     analyticsContext: AnalyticsContext;
     timeRangeControls: TimeRangeControls;
+    contextControls: ContextControls;
     contractEvidence: ContractEvidence;
     contractData: {
         consumptionPoints: ConsumptionSeriesPoint[];
@@ -190,6 +208,17 @@ watch(
     (controls) => {
         selectedFrom.value = controls.from;
         selectedTo.value = controls.to;
+    },
+);
+
+const selectedBuildingCode = ref(props.contextControls.buildingCode);
+const selectedMeterIdentifier = ref(props.contextControls.meterIdentifier);
+
+watch(
+    () => props.contextControls,
+    (controls) => {
+        selectedBuildingCode.value = controls.buildingCode;
+        selectedMeterIdentifier.value = controls.meterIdentifier;
     },
 );
 
@@ -249,6 +278,27 @@ const applyTimeRange = (payload: { from: string; to: string; timezoneLabel: stri
         query: {
             from: payload.from,
             to: payload.to,
+            building: props.contextControls.buildingCode,
+            meter: props.contextControls.meterIdentifier,
+        },
+    }), {
+        method: 'get',
+        preserveScroll: true,
+        preserveState: false,
+    });
+};
+
+const applyContext = (payload: { buildingCode: string; meterIdentifier: string; valid: boolean }) => {
+    if (!payload.valid) {
+        return;
+    }
+
+    router.visit(AnalyticsController.url({
+        query: {
+            building: payload.buildingCode,
+            meter: payload.meterIdentifier || undefined,
+            from: props.timeRangeControls.from || undefined,
+            to: props.timeRangeControls.to || undefined,
         },
     }), {
         method: 'get',
@@ -383,20 +433,31 @@ const summaryTrust = computed(() => ({
                         />
                     </div>
 
-                    <TimeRangePicker
-                        v-model:from="selectedFrom"
-                        v-model:to="selectedTo"
-                        :timezone-label="props.timeRangeControls.timezoneLabel"
-                        :min="props.timeRangeControls.min"
-                        :max="props.timeRangeControls.max"
-                        title="Investigation Window"
-                        description="Choose the historical date range that should drive every analytics contract on this page."
-                        from-label="Start date"
-                        to-label="End date"
-                        :presets="props.timeRangeControls.presets"
-                        :disabled="!props.analyticsContext.hasData"
-                        @change="applyTimeRange"
-                    />
+                    <div class="grid gap-5 xl:grid-cols-2">
+                        <AnalyticsContextSelector
+                            :building-code="selectedBuildingCode"
+                            :meter-identifier="selectedMeterIdentifier"
+                            :building-options="props.contextControls.buildingOptions"
+                            :meter-options="props.contextControls.meterOptions"
+                            :disabled="!props.analyticsContext.hasData"
+                            @change="applyContext"
+                        />
+
+                        <TimeRangePicker
+                            v-model:from="selectedFrom"
+                            v-model:to="selectedTo"
+                            :timezone-label="props.timeRangeControls.timezoneLabel"
+                            :min="props.timeRangeControls.min"
+                            :max="props.timeRangeControls.max"
+                            title="Investigation Window"
+                            description="Choose the historical date range that should drive every analytics contract on this page."
+                            from-label="Start date"
+                            to-label="End date"
+                            :presets="props.timeRangeControls.presets"
+                            :disabled="!props.analyticsContext.hasData"
+                            @change="applyTimeRange"
+                        />
+                    </div>
 
                     <dl class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <div

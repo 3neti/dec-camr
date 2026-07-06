@@ -35,6 +35,10 @@ test('analytics workbench shell renders through inertia when loginID exists', fu
             ->where('analyticsContext.periodLabel', 'No telemetry window available')
             ->where('timeRangeControls.from', '')
             ->where('timeRangeControls.presets', [])
+            ->where('contextControls.buildingCode', '')
+            ->where('contextControls.meterIdentifier', '')
+            ->where('contextControls.buildingOptions', [])
+            ->where('contextControls.meterOptions', [])
             ->where('contractEvidence.consumptionPointCount', 0)
             ->where('contractEvidence.demandPointCount', 0)
             ->where('contractEvidence.buildingSummaryCount', 0)
@@ -59,6 +63,10 @@ test('analytics workbench receives real contract data from analytics demo scenar
             ->where('timeRangeControls.timezoneLabel', config('app.timezone'))
             ->where('timeRangeControls.presets.0.key', 'selected-day')
             ->where('timeRangeControls.presets.1.key', 'available-window')
+            ->where('contextControls.buildingCode', fn (string $buildingCode): bool => $buildingCode !== '')
+            ->where('contextControls.meterIdentifier', fn (string $meterIdentifier): bool => $meterIdentifier !== '')
+            ->has('contextControls.buildingOptions')
+            ->has('contextControls.meterOptions')
             ->where('emptyState.kind', 'missing-filter')
             ->has('contractData.consumptionPoints')
             ->has('contractData.demandPoints')
@@ -71,6 +79,57 @@ test('analytics workbench receives real contract data from analytics demo scenar
         ->and($response->inertiaProps('contractEvidence.buildingSummaryCount'))->toBeGreaterThan(0)
         ->and($response->inertiaProps('timeRangeControls.from'))->toBe(CarbonImmutable::parse($response->inertiaProps('analyticsContext.from'))->toDateString())
         ->and($response->inertiaProps('timeRangeControls.to'))->toBe(CarbonImmutable::parse($response->inertiaProps('analyticsContext.to'))->toDateString());
+});
+
+test('analytics workbench selected building and meter query drives context contracts', function () {
+    $user = User::factory()->create();
+
+    $this->artisan('camr:scenario analytics-demo')
+        ->assertSuccessful();
+
+    $defaultResponse = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics')
+        ->assertOk();
+
+    $targetBuilding = collect($defaultResponse->inertiaProps('contextControls.buildingOptions'))
+        ->first(fn (array $option): bool => $option['value'] !== $defaultResponse->inertiaProps('contextControls.buildingCode'));
+
+    if ($targetBuilding === null) {
+        $this->markTestSkipped('Analytics demo scenario has only one building context available.');
+    }
+
+    $buildingResponse = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics?building='.$targetBuilding['value'])
+        ->assertOk();
+
+    $targetMeter = $buildingResponse->inertiaProps('contextControls.meterOptions.0');
+    $selectedDate = (string) $buildingResponse->inertiaProps('timeRangeControls.from');
+
+    $response = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics?building='.$targetBuilding['value'].'&meter='.$targetMeter['value'].'&from='.$selectedDate.'&to='.$selectedDate)
+        ->assertOk();
+
+    $from = CarbonImmutable::parse($selectedDate)->startOfDay();
+    $to = CarbonImmutable::parse($selectedDate)->endOfDay();
+    $expectedConsumptionPoints = app(BuildConsumptionSeriesAction::class)->execute(
+        meterIdentifier: (string) $targetMeter['value'],
+        buildingCode: (string) $targetBuilding['value'],
+        from: $from,
+        to: $to,
+    );
+    $expectedDemandPoints = app(BuildDemandSeriesAction::class)->execute(
+        meterIdentifier: (string) $targetMeter['value'],
+        buildingCode: (string) $targetBuilding['value'],
+        from: $from,
+        to: $to,
+    );
+
+    expect($response->inertiaProps('analyticsContext.buildingCode'))->toBe($targetBuilding['value'])
+        ->and($response->inertiaProps('analyticsContext.meterIdentifier'))->toBe($targetMeter['value'])
+        ->and($response->inertiaProps('contextControls.buildingCode'))->toBe($targetBuilding['value'])
+        ->and($response->inertiaProps('contextControls.meterIdentifier'))->toBe($targetMeter['value'])
+        ->and($response->inertiaProps('contractData.consumptionPoints'))->toEqual($expectedConsumptionPoints)
+        ->and($response->inertiaProps('contractData.demandPoints'))->toEqual($expectedDemandPoints);
 });
 
 test('analytics workbench selected query window drives every contract', function () {
