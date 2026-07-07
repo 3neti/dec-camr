@@ -51,11 +51,6 @@ final class AnalyticsController extends Controller
                     'contract' => 'ConsumptionSeriesPoint + DemandSeriesPoint',
                 ],
             ],
-            'readinessChecklist' => [
-                'Run php artisan camr:scenario analytics-demo for deterministic showcase data.',
-                'Review contract evidence before visual workspace composition.',
-                'Keep Reports as the formal workbook/export workflow.',
-            ],
             'exportPanel' => [
                 'title' => 'Evidence Export Panel',
                 'description' => 'Use Analytics to frame the evidence package, then open Reports for formal workbook exports.',
@@ -92,6 +87,7 @@ final class AnalyticsController extends Controller
                 toDate: $request->string('to')->toString(),
                 buildingCode: $request->string('building')->toString(),
                 meterIdentifier: $request->string('meter')->toString(),
+                comparisonMode: $request->string('comparison')->toString(),
                 legacyUser: User::query()->find((int) $request->session()->get('loginID')),
             ),
         ]);

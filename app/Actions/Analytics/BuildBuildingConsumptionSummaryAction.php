@@ -25,6 +25,7 @@ final class BuildBuildingConsumptionSummaryAction
         CarbonInterface $to,
         ConsumptionSeriesGrain|string $grain = ConsumptionSeriesGrain::Hourly,
         ?array $siteIds = null,
+        ?string $buildingCode = null,
     ): array {
         $query = Building::query()
             ->leftJoin('meter_site', 'meter_building_table.site_idx', '=', 'meter_site.site_id')
@@ -39,6 +40,9 @@ final class BuildBuildingConsumptionSummaryAction
 
         if ($siteIds !== null) {
             $query->whereIn('meter_building_table.site_idx', $siteIds);
+        }
+        if ($buildingCode !== null && $buildingCode !== '') {
+            $query->where('meter_building_table.building_code', $buildingCode);
         }
 
         $summaries = $query

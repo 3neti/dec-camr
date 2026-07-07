@@ -19,7 +19,6 @@ import LoadProfileExplorer from '@/components/analytics/LoadProfileExplorer.vue'
 import TimeRangePicker from '@/components/analytics/TimeRangePicker.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
 import ScopePill from '@/components/operator/ScopePill.vue';
-import StatusChip from '@/components/operator/StatusChip.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type WorkbenchSection = {
@@ -78,8 +77,11 @@ type QueryState = {
     meter: string | null;
     from: string | null;
     to: string | null;
+    comparison: 'portfolio' | 'selected' | string;
     url: string;
 };
+
+type ComparisonMode = 'portfolio' | 'selected';
 
 type ScopeVisibility = {
     mode: 'full' | 'selected' | 'none' | string;
@@ -195,7 +197,6 @@ const props = defineProps<{
         preservationNote: string;
     };
     workbenchSections: WorkbenchSection[];
-    readinessChecklist: string[];
     analyticsContext: AnalyticsContext;
     timeRangeControls: TimeRangeControls;
     contextControls: ContextControls;
@@ -219,6 +220,7 @@ const props = defineProps<{
 
 const selectedFrom = ref(props.timeRangeControls.from);
 const selectedTo = ref(props.timeRangeControls.to);
+const selectedComparisonMode = ref<ComparisonMode>(props.queryState.comparison as ComparisonMode ?? 'portfolio');
 
 watch(
     () => props.timeRangeControls,
@@ -236,6 +238,13 @@ watch(
     (controls) => {
         selectedBuildingCode.value = controls.buildingCode;
         selectedMeterIdentifier.value = controls.meterIdentifier;
+    },
+);
+
+watch(
+    () => props.queryState.comparison,
+    (comparison) => {
+        selectedComparisonMode.value = (comparison as ComparisonMode) ?? 'portfolio';
     },
 );
 
@@ -293,6 +302,7 @@ const visitAnalytics = (query: Partial<Omit<QueryState, 'url'>>) => {
             meter: query.meter ?? props.queryState.meter ?? undefined,
             from: query.from ?? props.queryState.from ?? undefined,
             to: query.to ?? props.queryState.to ?? undefined,
+            comparison: query.comparison ?? props.queryState.comparison ?? undefined,
         },
     }), {
         method: 'get',
@@ -322,6 +332,14 @@ const applyContext = (payload: { buildingCode: string; meterIdentifier: string; 
         meter: payload.meterIdentifier || null,
     });
 };
+
+const applyComparisonMode = (mode: ComparisonMode) => {
+    visitAnalytics({
+        comparison: mode,
+    });
+};
+
+const comparisonModeLabel = (mode: ComparisonMode): string => (mode === 'selected' ? 'Selected building' : 'Portfolio');
 
 const calculatedConsumptionPoints = computed(() => props.contractData.consumptionPoints.filter((point) => point.confidence.level === 'Calculated' && typeof point.kwhTotal === 'number'));
 const calculatedDemandPoints = computed(() => props.contractData.demandPoints.filter((point) => point.confidence.level === 'Calculated' && typeof point.kwDemand === 'number'));
@@ -438,7 +456,6 @@ const scopeTone = computed(() => {
                             </CardDescription>
                         </div>
 
-                        <StatusChip label="AN-018" tone="success" />
                     </div>
                 </CardHeader>
 
@@ -466,6 +483,11 @@ const scopeTone = computed(() => {
                             :title="props.queryState.url"
                         />
                         <ScopePill
+                            label="Comparison"
+                            :value="comparisonModeLabel(selectedComparisonMode as ComparisonMode)"
+                            tone="neutral"
+                        />
+                        <ScopePill
                             label="Scope"
                             :value="props.scopeVisibility.label"
                             :tone="scopeTone"
@@ -481,6 +503,28 @@ const scopeTone = computed(() => {
                         <span class="inline-flex items-center rounded-full border bg-muted/30 px-3 py-1 text-[11px] text-muted-foreground">
                             {{ props.scopeVisibility.description }}
                         </span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Comparison mode</p>
+                        <div class="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+                            <button
+                                type="button"
+                                class="rounded-md px-3 py-1 text-xs font-medium transition"
+                                :class="selectedComparisonMode === 'portfolio' ? 'bg-background text-foreground shadow' : 'text-muted-foreground hover:text-foreground'"
+                                @click="applyComparisonMode('portfolio')"
+                            >
+                                Portfolio
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-md px-3 py-1 text-xs font-medium transition"
+                                :class="selectedComparisonMode === 'selected' ? 'bg-background text-foreground shadow' : 'text-muted-foreground hover:text-foreground'"
+                                @click="applyComparisonMode('selected')"
+                            >
+                                Selected building
+                            </button>
+                        </div>
                     </div>
 
                     <div class="grid gap-5 xl:grid-cols-2">
@@ -679,29 +723,6 @@ const scopeTone = computed(() => {
                 </CardContent>
             </Card>
 
-            <Card class="h-fit py-5">
-                <CardHeader class="px-5 pb-0">
-                    <CardTitle>Readiness Checklist</CardTitle>
-                    <CardDescription>
-                        What must be true before this becomes an analytical workspace.
-                    </CardDescription>
-                </CardHeader>
-
-                <CardContent class="px-5">
-                    <ol class="space-y-3">
-                        <li
-                            v-for="(item, index) in props.readinessChecklist"
-                            :key="item"
-                            class="flex gap-3 rounded-xl border bg-background/70 p-3 text-sm leading-6"
-                        >
-                            <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-semibold text-white">
-                                {{ index + 1 }}
-                            </span>
-                            <span class="text-muted-foreground">{{ item }}</span>
-                        </li>
-                    </ol>
-                </CardContent>
-            </Card>
         </section>
     </OperatorPage>
 </template>

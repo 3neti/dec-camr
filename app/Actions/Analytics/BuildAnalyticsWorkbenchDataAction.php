@@ -27,10 +27,16 @@ final class BuildAnalyticsWorkbenchDataAction
         ?string $buildingCode = null,
         ?string $meterIdentifier = null,
         ?User $legacyUser = null,
+        ?string $comparisonMode = null,
     ): array {
         $allowedSiteIds = $this->allowedSiteIds($legacyUser);
         $contexts = $this->availableContexts($allowedSiteIds);
+        $resolvedComparisonMode = $this->normalizeComparisonMode($comparisonMode);
         $context = $this->defaultContext($contexts, $fromDate, $toDate, $buildingCode, $meterIdentifier);
+
+        if ($context !== null) {
+            $context['comparisonMode'] = $resolvedComparisonMode;
+        }
 
         if ($context === null) {
             return [
@@ -63,6 +69,7 @@ final class BuildAnalyticsWorkbenchDataAction
                     'meter' => null,
                     'from' => null,
                     'to' => null,
+                    'comparison' => $resolvedComparisonMode,
                     'url' => '/analytics',
                 ],
                 'scopeVisibility' => $this->scopeVisibility($allowedSiteIds),
@@ -99,6 +106,7 @@ final class BuildAnalyticsWorkbenchDataAction
             from: $context['from'],
             to: $context['to'],
             siteIds: $allowedSiteIds,
+            buildingCode: $context['comparisonMode'] === 'selected' ? $context['buildingCode'] : null,
         );
 
         return [
@@ -182,7 +190,7 @@ final class BuildAnalyticsWorkbenchDataAction
 
     /**
      * @param  Collection<int, object{meter_id: int|string|null, meter_name: string|null, site_idx: int|string|null, site_code: string|null, building_code: string|null, earliest_datetime: string|null, latest_datetime: string|null}>  $contexts
-     * @return array{meterIdentifier: string, buildingCode: string, siteCode: string|null, from: CarbonImmutable, to: CarbonImmutable, availableFrom: CarbonImmutable, availableTo: CarbonImmutable}|null
+     * @return array{meterIdentifier: string, buildingCode: string, siteCode: string|null, comparisonMode: string, from: CarbonImmutable, to: CarbonImmutable, availableFrom: CarbonImmutable, availableTo: CarbonImmutable}|null
      */
     private function defaultContext(
         Collection $contexts,
@@ -329,8 +337,8 @@ final class BuildAnalyticsWorkbenchDataAction
     }
 
     /**
-     * @param  array{meterIdentifier: string, buildingCode: string, siteCode: string|null, from: CarbonImmutable, to: CarbonImmutable, availableFrom: CarbonImmutable, availableTo: CarbonImmutable}  $context
-     * @return array{building: string, meter: string, from: string, to: string, url: string}
+     * @param  array{meterIdentifier: string, buildingCode: string, siteCode: string|null, comparisonMode: string, from: CarbonImmutable, to: CarbonImmutable, availableFrom: CarbonImmutable, availableTo: CarbonImmutable}  $context
+     * @return array{building: string, meter: string, from: string, to: string, comparison: string, url: string}
      */
     private function queryState(array $context): array
     {
@@ -339,12 +347,24 @@ final class BuildAnalyticsWorkbenchDataAction
             'meter' => $context['meterIdentifier'],
             'from' => $context['from']->toDateString(),
             'to' => $context['to']->toDateString(),
+            'comparison' => $context['comparisonMode'],
         ];
 
         return [
             ...$query,
             'url' => '/analytics?'.http_build_query($query),
         ];
+    }
+
+    private function normalizeComparisonMode(?string $comparisonMode): string
+    {
+        $normalized = strtolower(trim((string) $comparisonMode));
+
+        if ($normalized === 'selected') {
+            return 'selected';
+        }
+
+        return 'portfolio';
     }
 
     /**

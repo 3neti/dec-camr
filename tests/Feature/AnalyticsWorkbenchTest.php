@@ -31,7 +31,6 @@ test('analytics workbench shell renders through inertia when loginID exists', fu
             ->where('workbenchSections.1.id', 'demand')
             ->where('workbenchSections.2.id', 'building-comparison')
             ->where('workbenchSections.3.id', 'load-profile')
-            ->where('readinessChecklist.0', 'Run php artisan camr:scenario analytics-demo for deterministic showcase data.')
             ->where('analyticsContext.hasData', false)
             ->where('analyticsContext.periodLabel', 'No telemetry window available')
             ->where('timeRangeControls.from', '')
@@ -135,10 +134,25 @@ test('analytics workbench selected building and meter query drives context contr
         ->and($response->inertiaProps('contextControls.meterIdentifier'))->toBe($targetMeter['value'])
         ->and($response->inertiaProps('queryState.building'))->toBe($targetBuilding['value'])
         ->and($response->inertiaProps('queryState.meter'))->toBe($targetMeter['value'])
+        ->and($response->inertiaProps('queryState.comparison'))->toBe('portfolio')
         ->and($response->inertiaProps('queryState.from'))->toBe($selectedDate)
         ->and($response->inertiaProps('queryState.to'))->toBe($selectedDate)
         ->and($response->inertiaProps('contractData.consumptionPoints'))->toEqual($expectedConsumptionPoints)
         ->and($response->inertiaProps('contractData.demandPoints'))->toEqual($expectedDemandPoints);
+
+    $selectedModeResponse = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics?building='.$targetBuilding['value'].'&meter='.$targetMeter['value'].'&from='.$selectedDate.'&to='.$selectedDate.'&comparison=selected')
+        ->assertOk();
+
+    $expectedBuildingSummaries = app(BuildBuildingConsumptionSummaryAction::class)->execute(
+        from: $from,
+        to: $to,
+        buildingCode: (string) $targetBuilding['value'],
+    );
+
+    expect($selectedModeResponse->inertiaProps('queryState.comparison'))->toBe('selected')
+        ->and($selectedModeResponse->inertiaProps('contractData.buildingSummaries'))->toEqual($expectedBuildingSummaries)
+        ->and(count($selectedModeResponse->inertiaProps('contractData.buildingSummaries')))->toBe(1);
 });
 
 test('analytics workbench exposes canonical shareable query state', function () {
@@ -162,9 +176,10 @@ test('analytics workbench exposes canonical shareable query state', function () 
     expect($response->inertiaProps('queryState'))->toMatchArray([
         'building' => $selectedBuilding,
         'meter' => $selectedMeter,
+        'comparison' => 'portfolio',
         'from' => $selectedDate,
         'to' => $selectedDate,
-        'url' => '/analytics?building='.urlencode($selectedBuilding).'&meter='.urlencode($selectedMeter).'&from='.$selectedDate.'&to='.$selectedDate,
+        'url' => '/analytics?building='.urlencode($selectedBuilding).'&meter='.urlencode($selectedMeter).'&from='.$selectedDate.'&to='.$selectedDate.'&comparison=portfolio',
     ]);
 });
 
@@ -214,6 +229,48 @@ test('analytics workbench selected query window drives every contract', function
         ->and($response->inertiaProps('contractData.consumptionPoints'))->toEqual($expectedConsumptionPoints)
         ->and($response->inertiaProps('contractData.demandPoints'))->toEqual($expectedDemandPoints)
         ->and($response->inertiaProps('contractData.buildingSummaries'))->toEqual($expectedBuildingSummaries);
+});
+
+test('analytics workbench comparison mode defaults to portfolio and preserves only selected building when requested', function () {
+    $user = User::factory()->create(['user_type' => 'Admin', 'user_access' => 'ALL']);
+
+    $this->artisan('camr:scenario analytics-demo')
+        ->assertSuccessful();
+
+    $defaultResponse = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics')
+        ->assertOk();
+
+    $selectedBuilding = (string) $defaultResponse->inertiaProps('contextControls.buildingCode');
+    $selectedMeter = (string) $defaultResponse->inertiaProps('contextControls.meterIdentifier');
+    $selectedDate = (string) $defaultResponse->inertiaProps('timeRangeControls.from');
+    $from = CarbonImmutable::parse($selectedDate)->startOfDay();
+    $to = CarbonImmutable::parse($selectedDate)->endOfDay();
+
+    $portfolioResponse = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics?building='.$selectedBuilding.'&meter='.$selectedMeter.'&from='.$selectedDate.'&to='.$selectedDate)
+        ->assertOk();
+
+    if (count($portfolioResponse->inertiaProps('contractData.buildingSummaries')) < 2) {
+        $this->markTestSkipped('Portfolio comparison mode requires at least two building summaries for a meaningful assertion.');
+    }
+
+    $selectedResponse = $this->withSession(['loginID' => $user->id])
+        ->get('/analytics?building='.$selectedBuilding.'&meter='.$selectedMeter.'&from='.$selectedDate.'&to='.$selectedDate.'&comparison=selected')
+        ->assertOk();
+
+    $portfolioSummaries = $portfolioResponse->inertiaProps('contractData.buildingSummaries');
+    $expectedSelectedSummary = app(BuildBuildingConsumptionSummaryAction::class)->execute(
+        from: $from,
+        to: $to,
+        buildingCode: $selectedBuilding,
+    );
+
+    expect($portfolioResponse->inertiaProps('queryState.comparison'))->toBe('portfolio')
+        ->and($selectedResponse->inertiaProps('queryState.comparison'))->toBe('selected')
+        ->and($selectedResponse->inertiaProps('contractData.buildingSummaries'))->toEqual($expectedSelectedSummary)
+        ->and(count($selectedResponse->inertiaProps('contractData.buildingSummaries')))->toBe(1)
+        ->and((int) count($selectedResponse->inertiaProps('contractData.buildingSummaries')))->not()->toBe((int) count($portfolioSummaries));
 });
 
 test('analytics workbench contract data uses one selected analytical window', function () {
