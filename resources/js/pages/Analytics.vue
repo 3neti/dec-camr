@@ -81,6 +81,13 @@ type QueryState = {
     url: string;
 };
 
+type ScopeVisibility = {
+    mode: 'full' | 'selected' | 'none' | string;
+    label: string;
+    description: string;
+    siteCount: number | null;
+};
+
 type ContractEvidence = {
     consumptionPointCount: number;
     demandPointCount: number;
@@ -193,6 +200,7 @@ const props = defineProps<{
     timeRangeControls: TimeRangeControls;
     contextControls: ContextControls;
     queryState: QueryState;
+    scopeVisibility: ScopeVisibility;
     contractEvidence: ContractEvidence;
     contractData: {
         consumptionPoints: ConsumptionSeriesPoint[];
@@ -394,6 +402,18 @@ const summaryTrust = computed(() => ({
     ...workspaceTrust.value,
     displayLabel: workspaceTrust.value.level === 'Calculated' ? 'Evidence ready' : 'Review needed',
 }));
+
+const scopeTone = computed(() => {
+    if (props.scopeVisibility.mode === 'full') {
+        return 'success';
+    }
+
+    if (props.scopeVisibility.mode === 'selected') {
+        return 'info';
+    }
+
+    return 'warning';
+});
 </script>
 
 <template>
@@ -445,12 +465,21 @@ const summaryTrust = computed(() => ({
                             tone="neutral"
                             :title="props.queryState.url"
                         />
+                        <ScopePill
+                            label="Scope"
+                            :value="props.scopeVisibility.label"
+                            :tone="scopeTone"
+                            :title="props.scopeVisibility.description"
+                        />
                         <span
                             v-if="props.queryState.url !== '/analytics'"
                             class="inline-flex items-center rounded-full border bg-muted/30 px-3 py-1 text-[11px] text-muted-foreground"
                             :title="props.queryState.url"
                         >
                             Share URL ready
+                        </span>
+                        <span class="inline-flex items-center rounded-full border bg-muted/30 px-3 py-1 text-[11px] text-muted-foreground">
+                            {{ props.scopeVisibility.description }}
                         </span>
                     </div>
 

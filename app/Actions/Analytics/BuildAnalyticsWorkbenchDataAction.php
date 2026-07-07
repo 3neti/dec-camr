@@ -65,6 +65,7 @@ final class BuildAnalyticsWorkbenchDataAction
                     'to' => null,
                     'url' => '/analytics',
                 ],
+                'scopeVisibility' => $this->scopeVisibility($allowedSiteIds),
                 'contractData' => [
                     'consumptionPoints' => [],
                     'demandPoints' => [],
@@ -126,6 +127,7 @@ final class BuildAnalyticsWorkbenchDataAction
                 'meterOptions' => $this->meterOptions($contexts, $context['buildingCode']),
             ],
             'queryState' => $this->queryState($context),
+            'scopeVisibility' => $this->scopeVisibility($allowedSiteIds),
             'contractData' => [
                 'consumptionPoints' => $consumptionPoints,
                 'demandPoints' => $demandPoints,
@@ -342,6 +344,38 @@ final class BuildAnalyticsWorkbenchDataAction
         return [
             ...$query,
             'url' => '/analytics?'.http_build_query($query),
+        ];
+    }
+
+    /**
+     * @param  list<int>|null  $siteIds
+     * @return array{mode: string, label: string, description: string, siteCount: int|null}
+     */
+    private function scopeVisibility(?array $siteIds): array
+    {
+        if ($siteIds === null) {
+            return [
+                'mode' => 'full',
+                'label' => 'Full portfolio',
+                'description' => 'Analytics includes every site available to this installation.',
+                'siteCount' => null,
+            ];
+        }
+
+        if ($siteIds === []) {
+            return [
+                'mode' => 'none',
+                'label' => 'No analytics scope',
+                'description' => 'This user has no assigned sites with analytics telemetry.',
+                'siteCount' => 0,
+            ];
+        }
+
+        return [
+            'mode' => 'selected',
+            'label' => 'Selected sites',
+            'description' => sprintf('Analytics is limited to %d assigned site%s.', count($siteIds), count($siteIds) === 1 ? '' : 's'),
+            'siteCount' => count($siteIds),
         ];
     }
 
