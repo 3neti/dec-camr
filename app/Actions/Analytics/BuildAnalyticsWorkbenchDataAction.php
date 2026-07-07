@@ -58,6 +58,13 @@ final class BuildAnalyticsWorkbenchDataAction
                     'buildingOptions' => [],
                     'meterOptions' => [],
                 ],
+                'queryState' => [
+                    'building' => null,
+                    'meter' => null,
+                    'from' => null,
+                    'to' => null,
+                    'url' => '/analytics',
+                ],
                 'contractData' => [
                     'consumptionPoints' => [],
                     'demandPoints' => [],
@@ -118,6 +125,7 @@ final class BuildAnalyticsWorkbenchDataAction
                 'buildingOptions' => $this->buildingOptions($contexts),
                 'meterOptions' => $this->meterOptions($contexts, $context['buildingCode']),
             ],
+            'queryState' => $this->queryState($context),
             'contractData' => [
                 'consumptionPoints' => $consumptionPoints,
                 'demandPoints' => $demandPoints,
@@ -316,6 +324,25 @@ final class BuildAnalyticsWorkbenchDataAction
         }
 
         return $date;
+    }
+
+    /**
+     * @param  array{meterIdentifier: string, buildingCode: string, siteCode: string|null, from: CarbonImmutable, to: CarbonImmutable, availableFrom: CarbonImmutable, availableTo: CarbonImmutable}  $context
+     * @return array{building: string, meter: string, from: string, to: string, url: string}
+     */
+    private function queryState(array $context): array
+    {
+        $query = [
+            'building' => $context['buildingCode'],
+            'meter' => $context['meterIdentifier'],
+            'from' => $context['from']->toDateString(),
+            'to' => $context['to']->toDateString(),
+        ];
+
+        return [
+            ...$query,
+            'url' => '/analytics?'.http_build_query($query),
+        ];
     }
 
     /**

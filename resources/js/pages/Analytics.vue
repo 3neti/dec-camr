@@ -73,6 +73,14 @@ type ContextControls = {
     }[];
 };
 
+type QueryState = {
+    building: string | null;
+    meter: string | null;
+    from: string | null;
+    to: string | null;
+    url: string;
+};
+
 type ContractEvidence = {
     consumptionPointCount: number;
     demandPointCount: number;
@@ -184,6 +192,7 @@ const props = defineProps<{
     analyticsContext: AnalyticsContext;
     timeRangeControls: TimeRangeControls;
     contextControls: ContextControls;
+    queryState: QueryState;
     contractEvidence: ContractEvidence;
     contractData: {
         consumptionPoints: ConsumptionSeriesPoint[];
@@ -269,17 +278,13 @@ const exportPanelActions = computed(() => props.exportPanel.actions.map((action)
     primary: action.reportFamily === 'consumption',
 })));
 
-const applyTimeRange = (payload: { from: string; to: string; timezoneLabel: string; valid: boolean }) => {
-    if (!payload.valid) {
-        return;
-    }
-
+const visitAnalytics = (query: Partial<Omit<QueryState, 'url'>>) => {
     router.visit(AnalyticsController.url({
         query: {
-            from: payload.from,
-            to: payload.to,
-            building: props.contextControls.buildingCode,
-            meter: props.contextControls.meterIdentifier,
+            building: query.building ?? props.queryState.building ?? undefined,
+            meter: query.meter ?? props.queryState.meter ?? undefined,
+            from: query.from ?? props.queryState.from ?? undefined,
+            to: query.to ?? props.queryState.to ?? undefined,
         },
     }), {
         method: 'get',
@@ -288,22 +293,25 @@ const applyTimeRange = (payload: { from: string; to: string; timezoneLabel: stri
     });
 };
 
+const applyTimeRange = (payload: { from: string; to: string; timezoneLabel: string; valid: boolean }) => {
+    if (!payload.valid) {
+        return;
+    }
+
+    visitAnalytics({
+        from: payload.from,
+        to: payload.to,
+    });
+};
+
 const applyContext = (payload: { buildingCode: string; meterIdentifier: string; valid: boolean }) => {
     if (!payload.valid) {
         return;
     }
 
-    router.visit(AnalyticsController.url({
-        query: {
-            building: payload.buildingCode,
-            meter: payload.meterIdentifier || undefined,
-            from: props.timeRangeControls.from || undefined,
-            to: props.timeRangeControls.to || undefined,
-        },
-    }), {
-        method: 'get',
-        preserveScroll: true,
-        preserveState: false,
+    visitAnalytics({
+        building: payload.buildingCode,
+        meter: payload.meterIdentifier || null,
     });
 };
 
@@ -431,6 +439,19 @@ const summaryTrust = computed(() => ({
                             :value="props.analyticsContext.grain"
                             tone="neutral"
                         />
+                        <ScopePill
+                            label="Query"
+                            value="Query Synced"
+                            tone="neutral"
+                            :title="props.queryState.url"
+                        />
+                        <span
+                            v-if="props.queryState.url !== '/analytics'"
+                            class="inline-flex items-center rounded-full border bg-muted/30 px-3 py-1 text-[11px] text-muted-foreground"
+                            :title="props.queryState.url"
+                        >
+                            Share URL ready
+                        </span>
                     </div>
 
                     <div class="grid gap-5 xl:grid-cols-2">
