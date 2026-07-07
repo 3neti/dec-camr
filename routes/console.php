@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Rtu\ReplayTelemetryFileAction;
 use App\Actions\Ui\SimulateTelemetryAction;
 use App\Models\Company;
 use App\Models\Division;
@@ -223,3 +224,46 @@ Artisan::command('camr:simulate {--profile=demo} {--duration=10m} {--speed=real}
 
     return self::SUCCESS;
 })->purpose('Run deterministic telemetry simulation');
+
+Artisan::command('camr:replay-telemetry {--file=} {--speed=real} {--anchor=} {--dry-run} {--loop} {--allow-production}', function (): int {
+    if (app()->environment('production') && ! (bool) $this->option('allow-production')) {
+        $this->error('camr:replay-telemetry is disabled in production. Use --allow-production if this is intentional.');
+
+        return self::FAILURE;
+    }
+
+    $file = $this->option('file');
+    if (! is_string($file) || trim($file) === '') {
+        $this->error('The --file option is required.');
+
+        return self::FAILURE;
+    }
+
+    try {
+        $summary = app(ReplayTelemetryFileAction::class)->replay(
+            file: $file,
+            dryRun: (bool) $this->option('dry-run'),
+            speed: (string) $this->option('speed'),
+            anchor: $this->option('anchor') === null ? null : (string) $this->option('anchor'),
+            loop: (bool) $this->option('loop'),
+        );
+    } catch (InvalidArgumentException $exception) {
+        $this->error($exception->getMessage());
+
+        return self::FAILURE;
+    }
+
+    $this->info('Telemetry replay complete.');
+    $this->line(sprintf('File: %s', $file));
+    $this->line(sprintf('Speed: %s', (string) $this->option('speed')));
+    $this->line(sprintf('Dry run: %s', (bool) $this->option('dry-run') ? 'yes' : 'no'));
+    if (is_string($this->option('anchor')) && $this->option('anchor') !== '') {
+        $this->line(sprintf('Anchor: %s', (string) $this->option('anchor')));
+    }
+    $this->line(sprintf('Rows seen: %d', $summary['rows_seen']));
+    $this->line(sprintf('Rows replayed: %d', $summary['rows_replayed']));
+    $this->line(sprintf('Rows saved: %d', $summary['rows_saved']));
+    $this->line(sprintf('Rows failed: %d', $summary['rows_failed']));
+
+    return self::SUCCESS;
+})->purpose('Replay gateway-shaped telemetry from a CSV file through the live RTU ingest path');

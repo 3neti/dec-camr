@@ -19,6 +19,7 @@ final class OperatorScenarioDefinition
         public readonly string $expectedOutcome,
         public readonly ?string $suggestedTestFilter,
         public readonly ?string $demoNotes,
+        public readonly ?string $telemetryReplayFile = null,
     ) {}
 
     /**
@@ -39,6 +40,7 @@ final class OperatorScenarioDefinition
             'expected_outcome' => $this->expectedOutcome,
             'suggested_test_filter' => $this->suggestedTestFilter,
             'demo_notes' => $this->demoNotes,
+            'telemetry_replay_file' => $this->telemetryReplayFile,
         ];
     }
 }

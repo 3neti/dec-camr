@@ -12,6 +12,7 @@ test('scenario list displays known scenarios', function () {
         ->expectsOutputToContain('maintenance-meter-update')
         ->expectsOutputToContain('analyst-report-export')
         ->expectsOutputToContain('analytics-demo')
+        ->expectsOutputToContain('live-scada-demo')
         ->expectsOutputToContain('fresh-install-smoke')
         ->expectsOutputToContain('heavy-data-readiness');
 });

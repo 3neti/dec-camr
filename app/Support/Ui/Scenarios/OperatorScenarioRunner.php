@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Ui\Scenarios;
 
 use App\Actions\Ui\SimulateTelemetryAction;
+use App\Actions\Rtu\ReplayTelemetryFileAction;
 use Illuminate\Support\Facades\Artisan;
 use InvalidArgumentException;
 
@@ -13,6 +14,7 @@ final class OperatorScenarioRunner
     public function __construct(
         private readonly OperatorScenarioRegistry $registry,
         private readonly SimulateTelemetryAction $simulator,
+        private readonly ?ReplayTelemetryFileAction $replayTelemetryFile = null,
     ) {}
 
     /**
@@ -76,6 +78,22 @@ final class OperatorScenarioRunner
                 'status' => 'skipped',
                 'scenario' => $definition->simulatorScenario,
             ];
+        } elseif ($definition->telemetryReplayFile !== null) {
+            $replayTelemetryFile = $this->replayTelemetryFile ?? app(ReplayTelemetryFileAction::class);
+            $simulateSummary = [
+                'performed' => true,
+                'status' => $dryRun ? 'dry-run' : 'completed',
+                'scenario' => $definition->simulatorScenario,
+                'source' => 'file-replay',
+                'file' => $definition->telemetryReplayFile,
+            ];
+
+            $simulateSummary['summary'] = $replayTelemetryFile->replay(
+                file: $definition->telemetryReplayFile,
+                dryRun: $dryRun,
+                speed: $definition->simulatorSpeed,
+                anchor: $effectiveAnchor,
+            );
         } else {
             $simulateSummary = [
                 'performed' => true,
