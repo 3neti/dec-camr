@@ -7,7 +7,9 @@ use App\Models\Gateway;
 use App\Models\Meter;
 use App\Models\MeterLocation;
 use App\Models\Site;
+use App\Events\TelemetryIngested;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 function rtuUrl(string $path, string $mac): string
 {
@@ -366,4 +368,127 @@ test('rtu telemetry missing meter does not update meter_details last_log_update'
     $this->assertDatabaseHas('meter_data', [
         'meter_id' => 'MISSING-METER',
     ]);
+});
+
+test('rtu telemetry retries are idempotent for the same gateway payload identity', function () {
+    $payload = rtuTelemetryPayload([
+        'datetime' => '2026-07-01 03:00:00',
+        'wh_total' => 100,
+        'watt' => 900,
+    ]);
+
+    $this->post('/http_post_server.php', $payload)->assertOk();
+    $this->post('/http_post_server.php', $payload)->assertOk();
+
+    expect(DB::table('meter_data')
+        ->where('location', $payload['location'])
+        ->where('meter_id', $payload['meter_id'])
+        ->where('datetime', $payload['datetime'])
+        ->where('mac_addr', $payload['mac_address'])
+        ->count())->toBe(1);
+});
+
+test('rtu telemetry corrected retry updates the existing logical reading', function () {
+    $payload = rtuTelemetryPayload([
+        'datetime' => '2026-07-01 03:05:00',
+        'wh_total' => 100,
+        'watt' => 900,
+    ]);
+
+    $this->post('/http_post_server.php', $payload)->assertOk();
+    $this->post('/http_post_server.php', [
+        ...$payload,
+        'wh_total' => 125,
+        'watt' => 1100,
+    ])->assertOk();
+
+    $reading = DB::table('meter_data')
+        ->where('location', $payload['location'])
+        ->where('meter_id', $payload['meter_id'])
+        ->where('datetime', $payload['datetime'])
+        ->where('mac_addr', $payload['mac_address'])
+        ->first();
+
+    expect(DB::table('meter_data')
+        ->where('location', $payload['location'])
+        ->where('meter_id', $payload['meter_id'])
+        ->where('datetime', $payload['datetime'])
+        ->where('mac_addr', $payload['mac_address'])
+        ->count())->toBe(1)
+        ->and((float) $reading->wh_total)->toBe(125.0)
+        ->and((float) $reading->watt)->toBe(1100.0);
+});
+
+test('rtu telemetry same timestamp remains distinct for different meter or gateway identity', function () {
+    $timestamp = '2026-07-01 03:10:00';
+
+    $this->post('/http_post_server.php', rtuTelemetryPayload([
+        'datetime' => $timestamp,
+        'meter_id' => 'MTR-001',
+        'mac_address' => 'AA:BB:CC:DD:EE:01',
+    ]))->assertOk();
+    $this->post('/http_post_server.php', rtuTelemetryPayload([
+        'datetime' => $timestamp,
+        'meter_id' => 'MTR-002',
+        'mac_address' => 'AA:BB:CC:DD:EE:01',
+    ]))->assertOk();
+    $this->post('/http_post_server.php', rtuTelemetryPayload([
+        'datetime' => $timestamp,
+        'meter_id' => 'MTR-001',
+        'mac_address' => 'AA:BB:CC:DD:EE:99',
+    ]))->assertOk();
+
+    expect(DB::table('meter_data')->where('datetime', $timestamp)->count())->toBe(3);
+});
+
+test('rtu telemetry accepts either mac_address or gateway_mac as gateway identifier', function () {
+    $this->post('/http_post_server.php', rtuTelemetryPayload([
+        'datetime' => '2026-07-01 03:15:00',
+        'gateway_mac' => null,
+    ]))->assertOk();
+
+    $this->post('/http_post_server.php', rtuTelemetryPayload([
+        'datetime' => '2026-07-01 03:20:00',
+        'mac_address' => null,
+    ]))->assertOk();
+
+    expect(DB::table('meter_data')->where('datetime', '2026-07-01 03:15:00')->value('mac_addr'))->toBe('AA:BB:CC:DD:EE:01')
+        ->and(DB::table('meter_data')->where('datetime', '2026-07-01 03:20:00')->value('mac_addr'))->toBe('AA:BB:CC:DD:EE:01');
+});
+
+test('rtu telemetry invalid timestamps and numeric values preserve protocol acknowledgement', function () {
+    $response = $this->post('/http_post_server.php', rtuTelemetryPayload([
+        'datetime' => 'not-a-date',
+        'watt' => 'bad-power',
+        'max_rec_kw_dmd_time' => 'not-a-demand-time',
+    ]));
+
+    $response->assertOk();
+    expect($response->getContent())->toStartWith('OK, ');
+
+    $reading = DB::table('meter_data')
+        ->where('meter_id', 'MTR-001')
+        ->where('location', 'SITEA')
+        ->latest('id')
+        ->first();
+
+    expect($reading)->not->toBeNull()
+        ->and((float) $reading->watt)->toBe(0.0)
+        ->and($reading->max_rec_kw_dmd_time)->toBeNull();
+});
+
+test('rtu telemetry dispatches internal ingest event after successful save', function () {
+    Event::fake([TelemetryIngested::class]);
+
+    $payload = rtuTelemetryPayload(['datetime' => '2026-07-01 03:25:00']);
+
+    $this->post('/http_post_server.php', $payload)->assertOk();
+
+    Event::assertDispatched(
+        TelemetryIngested::class,
+        fn (TelemetryIngested $event): bool => $event->meterId === $payload['meter_id']
+            && $event->location === $payload['location']
+            && $event->datetime === $payload['datetime']
+            && $event->gatewayMac === $payload['mac_address']
+    );
 });

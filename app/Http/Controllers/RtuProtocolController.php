@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Rtu\IngestRtuTelemetryAction;
 use App\Models\Gateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -9,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 class RtuProtocolController extends Controller
 {
     private const TEXT_PLAIN_CONTENT_TYPE = 'text/plain; charset=UTF-8';
+
+    public function __construct(
+        private readonly IngestRtuTelemetryAction $ingestRtuTelemetry,
+    ) {}
 
     public function checkTime(): mixed
     {
@@ -123,73 +128,8 @@ class RtuProtocolController extends Controller
 
     public function httpPostServer(Request $request): mixed
     {
-        $saveToMeterData = (int) $request->input('save_to_meter_data', 0);
-        $location = (string) $request->input('location', '');
-        $datetime = str_replace('%20', ' ', (string) $request->input('datetime', ''));
-        $meterId = (string) $request->input('meter_id', '');
         $serverTime = date('Y-m-d H:i:s');
-
-        if ($saveToMeterData === 1) {
-            DB::table('meter_data')->insert([
-                'location' => $location,
-                'meter_id' => $meterId,
-                'datetime' => $datetime,
-                'vrms_a' => (float) $request->input('vrms_a', 0),
-                'vrms_b' => (float) $request->input('vrms_b', 0),
-                'vrms_c' => (float) $request->input('vrms_c', 0),
-                'irms_a' => (float) $request->input('irms_a', 0),
-                'irms_b' => (float) $request->input('irms_b', 0),
-                'irms_c' => (float) $request->input('irms_c', 0),
-                'freq' => (float) $request->input('freq', 0),
-                'pf' => (float) $request->input('pf', 0),
-                'watt' => (float) $request->input('watt', 0),
-                'va' => (float) $request->input('va', 0),
-                'var' => (float) $request->input('var', 0),
-                'wh_del' => (float) $request->input('wh_del', 0),
-                'wh_rec' => (float) $request->input('wh_rec', 0),
-                'wh_net' => (float) $request->input('wh_net', 0),
-                'wh_total' => (float) $request->input('wh_total', 0),
-                'varh_neg' => (float) $request->input('varh_neg', 0),
-                'varh_pos' => (float) $request->input('varh_pos', 0),
-                'varh_net' => (float) $request->input('varh_net', 0),
-                'varh_total' => (float) $request->input('varh_total', 0),
-                'vah_total' => (float) $request->input('vah_total', 0),
-                'max_rec_kw_dmd' => (float) $request->input('max_rec_kw_dmd', 0),
-                'max_rec_kw_dmd_time' => $request->input('max_rec_kw_dmd_time'),
-                'max_del_kw_dmd' => (float) $request->input('max_del_kw_dmd', 0),
-                'max_del_kw_dmd_time' => $request->input('max_del_kw_dmd_time'),
-                'max_pos_kvar_dmd' => (float) $request->input('max_pos_kvar_dmd', 0),
-                'max_pos_kvar_dmd_time' => $request->input('max_pos_kvar_dmd_time'),
-                'max_neg_kvar_dmd' => (float) $request->input('max_neg_kvar_dmd', 0),
-                'max_neg_kvar_dmd_time' => $request->input('max_neg_kvar_dmd_time'),
-                'v_ph_angle_a' => (float) $request->input('v_ph_angle_a', 0),
-                'v_ph_angle_b' => (float) $request->input('v_ph_angle_b', 0),
-                'v_ph_angle_c' => (float) $request->input('v_ph_angle_c', 0),
-                'i_ph_angle_a' => (float) $request->input('i_ph_angle_a', 0),
-                'i_ph_angle_b' => (float) $request->input('i_ph_angle_b', 0),
-                'i_ph_angle_c' => (float) $request->input('i_ph_angle_c', 0),
-                'mac_addr' => (string) $request->input('mac_address', $request->input('gateway_mac', '')),
-                'soft_rev' => (string) $request->input('soft_rev', ''),
-                'relay_status' => (int) $request->input('relay_status', 0),
-            ]);
-
-            Gateway::query()
-                ->where('site_code', $location)
-                ->where('gateway_mac', (string) $request->input('mac_address', $request->input('gateway_mac', '')))
-                ->update([
-                    'last_log_update' => $datetime,
-                    'soft_rev' => (string) $request->input('soft_rev', ''),
-                ]);
-
-            DB::table('meter_details')
-                ->where('site_code', $location)
-                ->where('meter_name', $meterId)
-                ->update(['last_log_update' => $datetime]);
-
-            DB::table('meter_site')
-                ->where('site_code', $location)
-                ->update(['last_log_update' => $datetime]);
-        }
+        $this->ingestRtuTelemetry->execute($request->all());
 
         return $this->textResponse("OK, $serverTime");
     }
