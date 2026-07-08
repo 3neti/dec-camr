@@ -174,7 +174,10 @@ test('operations-gateway-recovery smoke validates offline inspection and recover
     $gatewayHealth = collect($dashboardResponse->inertiaProps('gatewayHealth'));
     $telemetryTimeline = collect($dashboardResponse->inertiaProps('telemetryTimeline'));
     $operationalCommandBar = $dashboardResponse->inertiaProps('operationalCommandBar');
-    $onlineGateway = $gatewayHealth->first(fn (array $gateway): bool => $gateway['status'] === 'online');
+    $onlineGateway = Gateway::query()
+        ->where('last_log_update', '>=', $scenarioAnchor->subMinutes(30)->toDateTimeString())
+        ->orderBy('gateway_sn')
+        ->first();
 
     expect($dashboardResponse->inertiaProps('gatewaySummary.offline'))->toBeGreaterThan(0);
     expect($dashboardResponse->inertiaProps('gatewaySummary.online'))->toBeGreaterThan(0);

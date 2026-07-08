@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions\Ui;
 
+use App\Actions\Rtu\IngestRtuTelemetryAction;
 use App\Models\Building;
 use App\Models\Gateway;
 use App\Models\Meter;
-use App\Models\MeterData;
 use App\Models\Site;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -15,6 +15,10 @@ use InvalidArgumentException;
 
 final class SimulateTelemetryAction
 {
+    public function __construct(
+        private readonly IngestRtuTelemetryAction $ingestRtuTelemetry,
+    ) {}
+
     private const DETERMINISTIC_DEFAULT_ANCHOR = '2026-07-01 08:00:00';
 
     private const PROFILE_MINIMAL = 'minimal';
@@ -145,8 +149,7 @@ final class SimulateTelemetryAction
             }
 
             if (! $dryRun && $rows !== []) {
-                MeterData::query()->insert($rows);
-                $meterRowsInserted += count($rows);
+                $meterRowsInserted += $this->persistTelemetryRows($rows);
                 $rows = [];
             }
         }
@@ -159,6 +162,15 @@ final class SimulateTelemetryAction
                 array_values(array_unique($updatedSiteIds)),
                 $endTime,
             );
+
+            if ($scenario === 'offline-recovery' && $persistentOfflineGateways !== []) {
+                Gateway::query()
+                    ->whereIn('rtu_id', $persistentOfflineGateways)
+                    ->update([
+                        'last_log_update' => $timeAnchor->subMinutes(180)->toDateTimeString(),
+                        'soft_rev' => '2.09',
+                    ]);
+            }
         }
 
         return [
@@ -419,6 +431,7 @@ final class SimulateTelemetryAction
 
         $baseDate = $this->resolveDeterministicAnchor($anchor)->startOfDay();
         $rows = [];
+        $rowsInserted = 0;
         $updatedMeterIds = [];
         $updatedGatewayIds = [];
         $updatedSiteIds = [];
@@ -472,7 +485,7 @@ final class SimulateTelemetryAction
         }
 
         if (! $dryRun && $rows !== []) {
-            MeterData::query()->insert($rows);
+            $rowsInserted = $this->persistTelemetryRows($rows);
             $lastTimestamp = $baseDate->addHours(23)->addMinutes(55);
             $this->updateState(
                 'report-window',
@@ -484,7 +497,7 @@ final class SimulateTelemetryAction
         }
 
         return [
-            'rows_inserted' => $dryRun ? 0 : count($rows),
+            'rows_inserted' => $dryRun ? 0 : $rowsInserted,
             'meters_covered' => count(array_unique($updatedMeterIds)),
             'gateways_covered' => count(array_unique($updatedGatewayIds)),
         ];
@@ -600,6 +613,28 @@ final class SimulateTelemetryAction
             'created_at' => $timestamp,
             'updated_at' => $timestamp,
         ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function persistTelemetryRows(array $rows): int
+    {
+        $saved = 0;
+
+        foreach ($rows as $row) {
+            $result = $this->ingestRtuTelemetry->execute([
+                ...$row,
+                'save_to_meter_data' => 1,
+                'gateway_mac' => (string) ($row['mac_addr'] ?? ''),
+            ]);
+
+            if ($result['saved']) {
+                $saved++;
+            }
+        }
+
+        return $saved;
     }
 
     /**

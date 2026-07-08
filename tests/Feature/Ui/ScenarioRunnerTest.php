@@ -94,7 +94,7 @@ test('custom anchor is accepted and reported', function () {
 });
 
 test('invalid anchor is rejected', function () {
-    $simulator = new SimulateTelemetryAction;
+    $simulator = app(SimulateTelemetryAction::class);
     $method = (new ReflectionClass($simulator))->getMethod('resolveDeterministicAnchor');
     $method->setAccessible(true);
 
