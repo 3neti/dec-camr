@@ -300,3 +300,31 @@ test('operations engineer can review live operations command surface in a real b
 
     $this->travelBack();
 });
+
+test('admin can review maintenance crud surface in a real browser', function (string $path, array $visibleText) use ($seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $admin = $seedAnalyticsDemoScenario($this);
+
+    $this
+        ->actingAs($admin)
+        ->withSession(['loginID' => $admin->id]);
+
+    $page = visit($path)
+        ->assertPathIs($path);
+
+    foreach ($visibleText as $text) {
+        $page->assertSee($text);
+    }
+
+    $page->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+})->with([
+    'company maintenance' => ['/company', ['Company List', 'Create company', 'Existing companies', 'Actions']],
+    'division maintenance' => ['/division', ['Division List', 'Create division', 'Existing divisions', 'Actions']],
+    'site maintenance' => ['/site', ['Site Management', 'Create site', 'Existing sites', 'Actions']],
+    'building maintenance' => ['/building', ['Building List', 'Create building', 'Existing buildings', 'Actions']],
+    'gateway maintenance' => ['/gateway', ['Gateway Management', 'Create gateway', 'Existing gateways', 'Actions']],
+    'meter maintenance' => ['/meter', ['Meter Management', 'Create meter', 'Existing meters', 'Actions']],
+]);
