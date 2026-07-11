@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Support\Ui\Scenarios\OperatorScenarioRegistry;
 use App\Support\Ui\Scenarios\OperatorScenarioRunner;
 use Carbon\CarbonImmutable;
-use Database\Seeders\Profiles\AbstractProfileSeeder;
 use Database\Seeders\SeedProfileManager;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -33,8 +32,8 @@ Artisan::command('camr:seed-profile {--profile=demo}', function (): int {
     $admin = User::query()->firstOrCreate(
         ['email' => 'admin@demo.local'],
         [
-            'name' => 'admin',
-            'password' => Hash::make(AbstractProfileSeeder::DEFAULT_PASSWORD),
+            'name' => (string) config('camr.login_hint.username', 'admin'),
+            'password' => Hash::make((string) config('camr.login_hint.password', '123456')),
             'user_real_name' => 'Demo Seed Administrator',
             'user_job_title' => 'Platform Administrator',
             'user_type' => 'Admin',
@@ -63,6 +62,20 @@ Artisan::command('camr:seed-profile {--profile=demo}', function (): int {
 
     $this->info(sprintf('Seeding CAMR UI profile: %s', $profile));
     $manager->seed($profile, $admin, $division, $company);
+
+    User::query()->updateOrCreate(
+        ['email' => 'admin@demo.local'],
+        [
+            'name' => (string) config('camr.login_hint.username', 'admin'),
+            'password' => Hash::make((string) config('camr.login_hint.password', '123456')),
+            'user_real_name' => 'Demo Seed Administrator',
+            'user_job_title' => 'Platform Administrator',
+            'user_type' => 'Admin',
+            'user_access' => 'ALL',
+            'email_verified_at' => CarbonImmutable::now(),
+        ],
+    );
+
     $this->info('Profile seed complete.');
 
     return self::SUCCESS;

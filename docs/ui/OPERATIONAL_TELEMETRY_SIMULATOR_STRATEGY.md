@@ -4,6 +4,12 @@
 
 Phase 0.25 introduces a planned operational telemetry simulation layer that turns seeded CAMR entities into a living system for UI testing, operator demonstrations, and report validation.
 
+For the practical command manual, see:
+
+```text
+docs/ui/SCADA_SIMULATION_MANUAL.md
+```
+
 ## Why Static Data Is Not Enough
 
 Seed data can verify structure, but operator confidence depends on behavioral signals:
@@ -32,7 +38,10 @@ Implementation now uses the following command shape:
 - `php artisan camr:simulate --profile=heavy --duration=1h --speed=fast`
 - `php artisan camr:simulate --scenario=offline-recovery`
 - `php artisan camr:simulate --scenario=report-window`
+- `php artisan camr:simulate --scenario=analytics-demo`
 - `php artisan camr:simulate --profile=demo --duration=10m --deterministic=1 --anchor="2026-07-01 08:00:00"`
+- `php artisan camr:replay-telemetry --file=database/fixtures/telemetry/scada-demo-readings.csv --anchor="2026-07-01 08:00:00"`
+- `php artisan camr:scenario live-scada-demo`
 
 Production guard is enforced by default in the command implementation; add `--allow-production` only for approved local/manual validation.
 
@@ -40,7 +49,7 @@ Production guard is enforced by default in the command implementation; add `--al
 
 - `--profile` must be one of `minimal`, `demo`, or `heavy`.
 - `--speed` must be one of `slow`, `real`, `fast`.
-- `--scenario` must be one of `normal`, `offline-recovery`, `report-window`.
+- `--scenario` must be one of `normal`, `offline-recovery`, `report-window`, or `analytics-demo`.
 - Invalid values fail fast with an explicit supported-values message.
 
 ### Deterministic mode
@@ -87,7 +96,25 @@ Production guard is enforced by default in the command implementation; add `--al
 - offline recovery: hard gap then controlled return,
 - pending updates: set and clear update markers,
 - report-window generation: build measurable windows with clear boundaries,
+- analytics demo: build normal consumption, abnormal consumption, demand peaks, incomplete windows, unknown windows, and building comparison signals,
 - heavy load: sustained burst periods for stress checks.
+
+## Telemetry Replay
+
+`camr:replay-telemetry` reads gateway-shaped CSV rows and submits them through the live RTU ingest action.
+
+This keeps demo replay aligned with real gateway ingestion:
+
+- no gateway payload changes,
+- no direct `meter_data` inserts,
+- idempotent live-ingest behavior,
+- normal side effects for gateway, meter, and site freshness.
+
+The canonical replay fixture is:
+
+```text
+database/fixtures/telemetry/scada-demo-readings.csv
+```
 
 ## Data Written
 

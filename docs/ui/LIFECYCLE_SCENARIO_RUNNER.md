@@ -6,6 +6,12 @@ The lifecycle scenario runner provides a small orchestration entrypoint for repe
 
 It coordinates existing profile seeds and telemetry simulation without introducing new domain behavior.
 
+For the complete simulation and replay manual, see:
+
+```text
+docs/ui/SCADA_SIMULATION_MANUAL.md
+```
+
 ## Command
 
 Use:
@@ -29,6 +35,8 @@ Examples:
 php artisan camr:scenario --list
 php artisan camr:scenario operations-gateway-recovery --dry-run
 php artisan camr:scenario analyst-report-export --dry-run --anchor="2026-07-01 08:00:00"
+php artisan camr:scenario analytics-demo
+php artisan camr:scenario live-scada-demo
 php artisan camr:scenario fresh-install-smoke --no-simulate
 php artisan camr:scenario bogus --dry-run
 ```
@@ -39,6 +47,8 @@ php artisan camr:scenario bogus --dry-run
 - `operations-gateway-recovery`
 - `maintenance-meter-update`
 - `analyst-report-export`
+- `analytics-demo`
+- `live-scada-demo`
 - `fresh-install-smoke`
 - `heavy-data-readiness`
 
@@ -56,6 +66,16 @@ php artisan camr:scenario bogus --dry-run
 - Scenarios may define `deterministic_anchor`.
 - Explicit `--anchor` is always respected.
 
+## File Replay Scenarios
+
+`live-scada-demo` uses a telemetry replay fixture instead of generated simulator rows:
+
+```text
+database/fixtures/telemetry/scada-demo-readings.csv
+```
+
+The replay rows pass through the live RTU ingest path, preserving the same persistence and side-effect behavior used by gateway posts.
+
 ## Relationship to Operator Journeys
 
 Use this command as the canonical setup for future journey execution.
@@ -66,4 +86,3 @@ Typical sequence:
 3. run the matching journey or demo script
 
 This keeps operator scenarios repeatable and easier to review.
-

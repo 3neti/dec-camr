@@ -16,6 +16,35 @@ test('legacy login page renders with legacy public entry point', function () {
         );
 });
 
+test('legacy login page shows configured test credential hint when enabled', function () {
+    config()->set('camr.login_hint.enabled', true);
+    config()->set('camr.login_hint.label', 'Test login');
+    config()->set('camr.login_hint.username', 'admin');
+    config()->set('camr.login_hint.password', '123456');
+
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('auth/Login')
+            ->where('loginCredentialHint', [
+                'label' => 'Test login',
+                'username' => 'admin',
+                'password' => '123456',
+            ]),
+        );
+});
+
+test('legacy login page hides test credential hint when disabled', function () {
+    config()->set('camr.login_hint.enabled', false);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('auth/Login')
+            ->where('loginCredentialHint', null),
+        );
+});
+
 test('legacy login succeeds and preserves loginID session contract', function () {
     $user = User::factory()->create([
         'name' => 'admin',

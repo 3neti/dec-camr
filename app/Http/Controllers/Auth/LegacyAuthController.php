@@ -25,6 +25,7 @@ class LegacyAuthController extends Controller
             'fail' => $request->session()->get('fail'),
             'canResetPassword' => true,
             'legacyApplicationTitle' => 'Centralized Automated Meter Reading',
+            'loginCredentialHint' => $this->loginCredentialHint(),
         ]);
     }
 
@@ -81,5 +82,21 @@ class LegacyAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    /**
+     * @return array{label: string, username: string, password: string}|null
+     */
+    private function loginCredentialHint(): ?array
+    {
+        if (! (bool) config('camr.login_hint.enabled', false)) {
+            return null;
+        }
+
+        return [
+            'label' => (string) config('camr.login_hint.label', 'Test login'),
+            'username' => (string) config('camr.login_hint.username', 'admin'),
+            'password' => (string) config('camr.login_hint.password', '123456'),
+        ];
     }
 }

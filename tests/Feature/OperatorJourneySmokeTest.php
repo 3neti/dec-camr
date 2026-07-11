@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 $seedProfileAdminPassword = AbstractProfileSeeder::DEFAULT_PASSWORD;
+$legacyBaselineAdminPassword = '123456';
 $scenarioAnchor = CarbonImmutable::create(2026, 7, 1, 8, 0, 0);
 
 $fetchScenarioUser = function (string $name): User {
@@ -19,18 +20,18 @@ $fetchScenarioUser = function (string $name): User {
     return $user;
 };
 
-test('fresh-install smoke journey has bootstrap data and navigates core operator pages', function () use ($seedProfileAdminPassword, $fetchScenarioUser, $scenarioAnchor) {
+test('fresh-install smoke journey has bootstrap data and navigates core operator pages', function () use ($legacyBaselineAdminPassword, $fetchScenarioUser, $scenarioAnchor) {
     $this->travelTo($scenarioAnchor);
 
     $this->artisan('camr:scenario fresh-install-smoke')
         ->assertSuccessful()
         ->expectsOutputToContain('Scenario: fresh-install-smoke');
 
-    $admin = $fetchScenarioUser('admin_phase0');
+    $admin = $fetchScenarioUser('admin');
 
     $loginResponse = $this->post('/login-user', [
         'user_name' => $admin->name,
-        'InputPassword' => $seedProfileAdminPassword,
+        'InputPassword' => $legacyBaselineAdminPassword,
     ]);
 
     $loginResponse

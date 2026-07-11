@@ -1,7 +1,9 @@
 <?php
 
 use App\Actions\Ui\SimulateTelemetryAction;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 test('scenario list displays known scenarios', function () {
     $this->artisan('camr:scenario --list')
@@ -108,4 +110,37 @@ test('no-seed and no-simulate skips both execution steps', function () {
         ->assertSuccessful()
         ->expectsOutputToContain('Seed status: skipped (profile=minimal)')
         ->expectsOutputToContain('Simulation status: skipped (scenario=normal)');
+});
+
+test('profile seeding preserves legacy-compatible baseline admin credentials', function () {
+    $this->artisan('camr:seed-profile --profile=demo')
+        ->assertSuccessful();
+
+    $admin = User::query()
+        ->where('email', 'admin@demo.local')
+        ->first();
+
+    expect($admin)->not->toBeNull();
+    expect($admin?->name)->toBe('admin');
+    expect(Hash::check('123456', (string) $admin?->password))->toBeTrue();
+
+    $this->post('/login-user', [
+        'user_name' => 'admin',
+        'InputPassword' => '123456',
+    ])->assertRedirect('/site');
+
+    $this->assertAuthenticatedAs($admin);
+});
+
+test('minimal profile seeding preserves legacy-compatible baseline admin credentials', function () {
+    $this->artisan('camr:seed-profile --profile=minimal')
+        ->assertSuccessful();
+
+    $admin = User::query()
+        ->where('email', 'admin@demo.local')
+        ->first();
+
+    expect($admin)->not->toBeNull();
+    expect($admin?->name)->toBe('admin');
+    expect(Hash::check('123456', (string) $admin?->password))->toBeTrue();
 });

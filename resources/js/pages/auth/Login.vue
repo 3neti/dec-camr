@@ -5,11 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+type LoginCredentialHint = {
+    label: string;
+    username: string;
+    password: string;
+};
+
 const props = defineProps<{
     status?: string;
     fail?: string;
     canResetPassword: boolean;
     legacyApplicationTitle?: string;
+    loginCredentialHint?: LoginCredentialHint | null;
 }>();
 
 const page = usePage();
@@ -42,6 +49,33 @@ const csrfToken = page.props.csrfToken as string;
             role="status"
         >
             {{ fail }}
+        </div>
+
+        <div
+            v-if="props.loginCredentialHint"
+            class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100"
+            role="note"
+            data-test="login-credential-hint"
+        >
+            <p class="font-semibold">{{ props.loginCredentialHint.label }}</p>
+            <dl class="mt-2 grid gap-1">
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-amber-800 dark:text-amber-200">Username</dt>
+                    <dd>
+                        <code class="rounded bg-white/80 px-2 py-0.5 font-mono text-amber-950 dark:bg-black/30 dark:text-amber-50">
+                            {{ props.loginCredentialHint.username }}
+                        </code>
+                    </dd>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-amber-800 dark:text-amber-200">Password</dt>
+                    <dd>
+                        <code class="rounded bg-white/80 px-2 py-0.5 font-mono text-amber-950 dark:bg-black/30 dark:text-amber-50">
+                            {{ props.loginCredentialHint.password }}
+                        </code>
+                    </dd>
+                </div>
+            </dl>
         </div>
 
         <div class="grid gap-2">
