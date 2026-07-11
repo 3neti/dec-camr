@@ -148,3 +148,42 @@ test('authenticated admin can open analytics in a real browser', function () use
 
     $this->travelBack();
 });
+
+test('analyst can review analytics evidence controls in a real browser', function () use ($seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $seedAnalyticsDemoScenario($this);
+
+    $analyst = User::query()
+        ->where('name', 'analyst_demo')
+        ->first();
+
+    expect($analyst)->not->toBeNull();
+
+    $this
+        ->actingAs($analyst)
+        ->withSession(['loginID' => $analyst->id]);
+
+    visit('/analytics')
+        ->assertPathIs('/analytics')
+        ->assertSee('Analytics Workbench')
+        ->assertSee('Historical Analysis')
+        ->assertSee('Portfolio')
+        ->assertSee('Selected building')
+        ->assertSee('Building')
+        ->assertSee('Meter')
+        ->assertSee('Investigation Window')
+        ->assertSee('Start date')
+        ->assertSee('End date')
+        ->assertSee('Selected Window Consumption')
+        ->assertSee('Peak Demand')
+        ->assertSee('Building Leader')
+        ->assertSee('Consumption Trend')
+        ->assertSee('Demand Curve')
+        ->assertSee('Building Comparison')
+        ->assertSee('Load Profile Explorer')
+        ->assertSee('Evidence Export Panel')
+        ->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+});

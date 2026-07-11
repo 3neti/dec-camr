@@ -416,7 +416,7 @@ npm install
 npx playwright install chromium
 ```
 
-BT-002 validates the real-browser legacy login, `/site`, `/dashboard`, and `/analytics` smoke path. Deeper multi-step journeys remain covered by feature tests until the browser journey suite is expanded.
+BT-003 validates the real-browser legacy login, `/site`, `/dashboard`, `/analytics`, and first analyst analytics evidence-control smoke path. Deeper multi-step journeys remain covered by feature tests until the browser journey suite is expanded.
 
 ## Cache Clearing / Reset Commands
 

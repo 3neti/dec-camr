@@ -2,7 +2,7 @@
 
 This directory contains the reusable foundation used by UI Operator Journey planning.
 
-`AdminOperatorSmokeTest.php` is the first executable browser smoke journey. BT-002 covers the high-value browser smoke surfaces:
+`AdminOperatorSmokeTest.php` is the first executable browser smoke journey. BT-003 covers the high-value browser smoke surfaces and the first analyst analytics journey:
 
 - `/` renders the legacy login page,
 - the explicit `admin / 123456` credential hint is visible,
@@ -10,6 +10,7 @@ This directory contains the reusable foundation used by UI Operator Journey plan
 - `/site` renders the operator home surface,
 - `/dashboard` renders the operator console surface,
 - `/analytics` renders the analytics workbench,
+- the analyst can see analytics evidence controls and major workbench sections,
 - visited login, operator-home, dashboard, and analytics pages report no JavaScript errors.
 
 Full multi-step operator journeys remain covered by feature tests until the browser journey suite is expanded.
