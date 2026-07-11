@@ -26,7 +26,7 @@ enum OperatorPersona: string
         return match ($this) {
             self::ADMINISTRATOR => [
                 'seed_email' => 'admin@demo.local',
-                'seed_password' => 'Demo@1234',
+                'seed_password' => '123456',
                 'goal' => 'run setup, approvals, and user scoping',
             ],
             self::OPERATIONS_ENGINEER => [

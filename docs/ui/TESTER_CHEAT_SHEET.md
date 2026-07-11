@@ -401,11 +401,22 @@ Do not use these for visual UI review.
 php artisan test --compact
 php artisan test --compact tests/Feature/OperatorJourneySmokeTest.php
 php artisan test --compact tests/Feature/Ui/ScenarioRunnerTest.php
+php artisan test --compact tests/Browser/OperatorJourney/AdminOperatorSmokeTest.php
 vendor/bin/pint --dirty --format agent
 npm run lint:check
 npm run types:check
 npm run build
 ```
+
+Browser smoke tests require the browser test dependencies and Chromium browser binary:
+
+```bash
+composer install
+npm install
+npx playwright install chromium
+```
+
+BT-001 currently validates the real-browser legacy login and operator-home path. Dashboard, Analytics, and deeper Inertia navigation remain covered by feature tests until the browser journey suite is expanded.
 
 ## Cache Clearing / Reset Commands
 
