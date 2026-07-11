@@ -328,3 +328,29 @@ test('admin can review maintenance crud surface in a real browser', function (st
     'gateway maintenance' => ['/gateway', ['Gateway Management', 'Create gateway', 'Existing gateways', 'Actions']],
     'meter maintenance' => ['/meter', ['Meter Management', 'Create meter', 'Existing meters', 'Actions']],
 ]);
+
+test('admin can review core operator surface on a mobile viewport in a real browser', function (string $path, array $visibleText) use ($seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $admin = $seedAnalyticsDemoScenario($this);
+
+    $this
+        ->actingAs($admin)
+        ->withSession(['loginID' => $admin->id]);
+
+    $page = visit($path)
+        ->on()->mobile()
+        ->assertPathIs($path);
+
+    foreach ($visibleText as $text) {
+        $page->assertSee($text);
+    }
+
+    $page->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+})->with([
+    'operator home mobile' => ['/site', ['Site Management', 'Create site']],
+    'dashboard mobile' => ['/dashboard', ['CAMR Operator Console', 'Gateway Health', 'Recent Telemetry']],
+    'analytics mobile' => ['/analytics', ['Analytics Workbench', 'Consumption Trend', 'Demand Curve']],
+]);
