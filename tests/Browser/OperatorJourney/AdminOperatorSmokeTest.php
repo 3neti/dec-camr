@@ -187,3 +187,44 @@ test('analyst can review analytics evidence controls in a real browser', functio
 
     $this->travelBack();
 });
+
+test('admin can review live scada replay signals on the dashboard in a real browser', function () {
+    config()->set('session.driver', 'file');
+
+    $this->travelTo(CarbonImmutable::create(2026, 7, 1, 8, 0, 0));
+
+    $this->artisan('camr:scenario live-scada-demo')
+        ->assertSuccessful();
+
+    $admin = User::query()
+        ->where('name', 'admin')
+        ->first();
+
+    expect($admin)->not->toBeNull();
+
+    $this
+        ->actingAs($admin)
+        ->withSession(['loginID' => $admin->id]);
+
+    visit('/dashboard')
+        ->assertPathIs('/dashboard')
+        ->assertSee('CAMR Operator Console')
+        ->assertSee('Telemetry freshness')
+        ->assertSee('Pending operator work')
+        ->assertSee('Gateways')
+        ->assertSee('Meters')
+        ->assertSee('Telemetry')
+        ->assertSee('Pending Updates')
+        ->assertSee('Operations Snapshot')
+        ->assertSee('Latest telemetry')
+        ->assertSee('Recent Telemetry')
+        ->assertSee('Gateway Health')
+        ->assertSee('Meter Health')
+        ->assertSee('Timeline')
+        ->assertSee('Operational Command Bar')
+        ->assertSee('Pending Update Panel')
+        ->assertSee('Report Readiness')
+        ->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+});

@@ -416,7 +416,7 @@ npm install
 npx playwright install chromium
 ```
 
-BT-003 validates the real-browser legacy login, `/site`, `/dashboard`, `/analytics`, and first analyst analytics evidence-control smoke path. Deeper multi-step journeys remain covered by feature tests until the browser journey suite is expanded.
+BT-004 validates the real-browser legacy login, `/site`, `/dashboard`, `/analytics`, first analyst analytics evidence-control smoke path, and live SCADA dashboard replay smoke path. Deeper multi-step journeys remain covered by feature tests until the browser journey suite is expanded.
 
 ## Cache Clearing / Reset Commands
 
