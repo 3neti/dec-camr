@@ -354,3 +354,30 @@ test('admin can review core operator surface on a mobile viewport in a real brow
     'dashboard mobile' => ['/dashboard', ['CAMR Operator Console', 'Gateway Health', 'Recent Telemetry']],
     'analytics mobile' => ['/analytics', ['Analytics Workbench', 'Consumption Trend', 'Demand Curve']],
 ]);
+
+test('admin can review report workflow surface in a real browser', function (string $path, array $visibleText) use ($seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $admin = $seedAnalyticsDemoScenario($this);
+
+    $this
+        ->actingAs($admin)
+        ->withSession(['loginID' => $admin->id]);
+
+    $page = visit($path)
+        ->assertPathIs($path);
+
+    foreach ($visibleText as $text) {
+        $page->assertSee($text);
+    }
+
+    $page->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+})->with([
+    'sap report' => ['/sap_report', ['SAP Report', 'Report filters', 'Preview summary', 'Download shelf']],
+    'raw report' => ['/raw_report', ['Raw Report', 'Report filters', 'Preview summary', 'Download shelf']],
+    'site report' => ['/site_report', ['Site Report', 'Report filters', 'Preview summary', 'Download shelf']],
+    'consumption report' => ['/consumption_report', ['Consumption Report', 'Report filters', 'Preview summary', 'Download shelf']],
+    'demand report' => ['/demand_report', ['Demand Report', 'Report filters', 'Preview summary', 'Download shelf']],
+]);

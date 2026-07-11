@@ -2,7 +2,7 @@
 
 This directory contains the reusable foundation used by UI Operator Journey planning.
 
-`AdminOperatorSmokeTest.php` is the first executable browser smoke journey. BT-009 covers the high-value browser smoke surfaces, the first analyst analytics journey, live SCADA dashboard smoke, gateway recovery smoke, live operations command surface smoke, maintenance CRUD shell smoke, and responsive mobile smoke:
+`AdminOperatorSmokeTest.php` is the first executable browser smoke journey. BT-010 covers the high-value browser smoke surfaces, the first analyst analytics journey, live SCADA dashboard smoke, gateway recovery smoke, live operations command surface smoke, maintenance CRUD shell smoke, responsive mobile smoke, and report workflow smoke:
 
 - `/` renders the legacy login page,
 - the explicit `admin / 123456` credential hint is visible,
@@ -16,6 +16,7 @@ This directory contains the reusable foundation used by UI Operator Journey plan
 - the operations command surface renders approved RTU-safe command affordances without executing protocol endpoints,
 - the Company, Division, Site, Building, Gateway, and Meter maintenance pages render create, list, and action affordances,
 - the `/site`, `/dashboard`, and `/analytics` core operator surfaces render under a mobile viewport,
+- the SAP, Raw, Site, Consumption, and Demand report pages render filter, preview, and download shelf sections,
 - visited login, operator-home, dashboard, and analytics pages report no JavaScript errors.
 
 Full multi-step operator journeys remain covered by feature tests until the browser journey suite is expanded.
