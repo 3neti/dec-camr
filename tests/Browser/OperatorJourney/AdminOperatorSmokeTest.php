@@ -431,3 +431,35 @@ test('analyst can prepare a consumption export in a real browser', function () u
 
     $this->travelBack();
 });
+
+test('operations engineer can review live scada surface in a real browser', function (string $path, array $visibleText) use ($authenticateLegacyBrowserUser) {
+    config()->set('session.driver', 'file');
+
+    $this->travelTo(CarbonImmutable::create(2026, 7, 1, 8, 0, 0));
+
+    $this->artisan('camr:scenario live-scada-demo --anchor="2026-07-01 08:00:00"')
+        ->assertSuccessful();
+
+    $opsAdmin = User::query()
+        ->where('name', 'ops_admin_demo')
+        ->first();
+
+    expect($opsAdmin)->not->toBeNull();
+
+    $authenticateLegacyBrowserUser($this, $opsAdmin);
+
+    $page = visit($path)
+        ->assertPathIs($path);
+
+    foreach ($visibleText as $text) {
+        $page->assertSee($text);
+    }
+
+    $page->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+})->with([
+    'live scada dashboard' => ['/dashboard', ['CAMR Operator Console', 'Operations Snapshot', 'Latest telemetry', 'Gateway Health', 'Meter Health', 'Timeline']],
+    'live scada gateways' => ['/gateway', ['Gateway Management', 'Create gateway', 'Existing gateways', 'Gateway Serial Number']],
+    'live scada meters' => ['/meter', ['Meter Management', 'Create meter', 'Existing meters', 'Meter Name']],
+]);
