@@ -110,3 +110,41 @@ test('authenticated admin can open the operator home in a real browser', functio
 
     $this->travelBack();
 });
+
+test('authenticated admin can open dashboard in a real browser', function () use ($seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $admin = $seedAnalyticsDemoScenario($this);
+
+    $this
+        ->actingAs($admin)
+        ->withSession(['loginID' => $admin->id]);
+
+    visit('/dashboard')
+        ->assertPathIs('/dashboard')
+        ->assertSee('CAMR Operator Console')
+        ->assertSee('Gateway Health')
+        ->assertSee('Recent Telemetry')
+        ->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+});
+
+test('authenticated admin can open analytics in a real browser', function () use ($seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $admin = $seedAnalyticsDemoScenario($this);
+
+    $this
+        ->actingAs($admin)
+        ->withSession(['loginID' => $admin->id]);
+
+    visit('/analytics')
+        ->assertPathIs('/analytics')
+        ->assertSee('Analytics Workbench')
+        ->assertSee('Historical Analysis')
+        ->assertSee('Consumption Trend')
+        ->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+});
