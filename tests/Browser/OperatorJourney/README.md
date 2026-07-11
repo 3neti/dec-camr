@@ -21,6 +21,8 @@ This directory contains the reusable foundation used by UI Operator Journey plan
 
 Full multi-step operator journeys remain covered by feature tests until the browser journey suite is expanded.
 
+BT-011 keeps the browser suite maintainable by centralizing the legacy browser session setup. New browser journeys should authenticate through the same `loginID` session compatibility path instead of only relying on Laravel guard state.
+
 ## Directory
 
 - `Support/OperatorPersona.php` — persona registry used by journey builders and future tests.

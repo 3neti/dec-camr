@@ -23,6 +23,12 @@ $seedAnalyticsDemoScenario = function (object $testCase): User {
     return $admin;
 };
 
+$authenticateLegacyBrowserUser = function (object $testCase, User $user): void {
+    $testCase
+        ->actingAs($user)
+        ->withSession(['loginID' => $user->id]);
+};
+
 test('admin login page exposes the explicit test credential and accepts the legacy login payload in a real browser', function () use ($seedAnalyticsDemoScenario) {
     config()->set('session.driver', 'file');
 
@@ -301,14 +307,12 @@ test('operations engineer can review live operations command surface in a real b
     $this->travelBack();
 });
 
-test('admin can review maintenance crud surface in a real browser', function (string $path, array $visibleText) use ($seedAnalyticsDemoScenario) {
+test('admin can review maintenance crud surface in a real browser', function (string $path, array $visibleText) use ($authenticateLegacyBrowserUser, $seedAnalyticsDemoScenario) {
     config()->set('session.driver', 'file');
 
     $admin = $seedAnalyticsDemoScenario($this);
 
-    $this
-        ->actingAs($admin)
-        ->withSession(['loginID' => $admin->id]);
+    $authenticateLegacyBrowserUser($this, $admin);
 
     $page = visit($path)
         ->assertPathIs($path);
@@ -329,14 +333,12 @@ test('admin can review maintenance crud surface in a real browser', function (st
     'meter maintenance' => ['/meter', ['Meter Management', 'Create meter', 'Existing meters', 'Actions']],
 ]);
 
-test('admin can review core operator surface on a mobile viewport in a real browser', function (string $path, array $visibleText) use ($seedAnalyticsDemoScenario) {
+test('admin can review core operator surface on a mobile viewport in a real browser', function (string $path, array $visibleText) use ($authenticateLegacyBrowserUser, $seedAnalyticsDemoScenario) {
     config()->set('session.driver', 'file');
 
     $admin = $seedAnalyticsDemoScenario($this);
 
-    $this
-        ->actingAs($admin)
-        ->withSession(['loginID' => $admin->id]);
+    $authenticateLegacyBrowserUser($this, $admin);
 
     $page = visit($path)
         ->on()->mobile()
@@ -355,14 +357,12 @@ test('admin can review core operator surface on a mobile viewport in a real brow
     'analytics mobile' => ['/analytics', ['Analytics Workbench', 'Consumption Trend', 'Demand Curve']],
 ]);
 
-test('admin can review report workflow surface in a real browser', function (string $path, array $visibleText) use ($seedAnalyticsDemoScenario) {
+test('admin can review report workflow surface in a real browser', function (string $path, array $visibleText) use ($authenticateLegacyBrowserUser, $seedAnalyticsDemoScenario) {
     config()->set('session.driver', 'file');
 
     $admin = $seedAnalyticsDemoScenario($this);
 
-    $this
-        ->actingAs($admin)
-        ->withSession(['loginID' => $admin->id]);
+    $authenticateLegacyBrowserUser($this, $admin);
 
     $page = visit($path)
         ->assertPathIs($path);
