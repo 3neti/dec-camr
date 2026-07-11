@@ -228,3 +228,40 @@ test('admin can review live scada replay signals on the dashboard in a real brow
 
     $this->travelBack();
 });
+
+test('operations engineer can review gateway recovery signals in a real browser', function () {
+    config()->set('session.driver', 'file');
+
+    $this->travelTo(CarbonImmutable::create(2026, 7, 1, 8, 0, 0));
+
+    $this->artisan('camr:scenario operations-gateway-recovery --anchor="2026-07-01 08:00:00"')
+        ->assertSuccessful();
+
+    $opsAdmin = User::query()
+        ->where('name', 'ops_admin_demo')
+        ->first();
+
+    expect($opsAdmin)->not->toBeNull();
+
+    $this
+        ->actingAs($opsAdmin)
+        ->withSession(['loginID' => $opsAdmin->id]);
+
+    visit('/dashboard')
+        ->assertPathIs('/dashboard')
+        ->assertSee('CAMR Operator Console')
+        ->assertSee('Needs Attention')
+        ->assertSee('gateway')
+        ->assertSee('offline')
+        ->assertSee('stale')
+        ->assertSee('Open gateway')
+        ->assertSee('Gateway Health')
+        ->assertSee('Meter Health')
+        ->assertSee('Timeline')
+        ->assertSee('stale/offline transitions')
+        ->assertSee('Operational Command Bar')
+        ->assertSee('Pending Update Panel')
+        ->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+});
