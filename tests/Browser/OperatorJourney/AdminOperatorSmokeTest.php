@@ -4,6 +4,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
@@ -381,3 +382,52 @@ test('admin can review report workflow surface in a real browser', function (str
     'consumption report' => ['/consumption_report', ['Consumption Report', 'Report filters', 'Preview summary', 'Download shelf']],
     'demand report' => ['/demand_report', ['Demand Report', 'Report filters', 'Preview summary', 'Download shelf']],
 ]);
+
+test('analyst can prepare a consumption export in a real browser', function () use ($authenticateLegacyBrowserUser, $seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $seedAnalyticsDemoScenario($this);
+
+    $analyst = User::query()
+        ->where('name', 'analyst_demo')
+        ->first();
+
+    expect($analyst)->not->toBeNull();
+
+    $reportMeter = DB::table('meter_details')
+        ->join('meter_data', 'meter_data.meter_id', '=', 'meter_details.meter_name')
+        ->whereNotNull('meter_details.site_idx')
+        ->orderBy('meter_details.meter_id')
+        ->select('meter_details.site_idx', 'meter_details.meter_name')
+        ->first();
+
+    expect($reportMeter)->not->toBeNull();
+
+    $authenticateLegacyBrowserUser($this, $analyst);
+
+    $page = visit('/consumption_report')
+        ->assertPathIs('/consumption_report')
+        ->assertSee('Consumption Report')
+        ->assertSee('Report filters')
+        ->assertSee('Download Consumption Export')
+        ->assertSee('Download shelf')
+        ->assertSee('No downloads in this session yet')
+        ->assertNoJavaScriptErrors();
+
+    $page
+        ->fill('#site_id', (string) $reportMeter->site_idx)
+        ->fill('#meter_id', (string) $reportMeter->meter_name)
+        ->fill('#start_date', '2026-07-01')
+        ->fill('#start_time', '00:00')
+        ->fill('#end_date', '2026-07-01')
+        ->fill('#end_time', '23:59')
+        ->wait(0.5)
+        ->assertScript("document.querySelector('#site_id').value", (string) $reportMeter->site_idx)
+        ->assertScript("document.querySelector('#meter_id').value", (string) $reportMeter->meter_name)
+        ->assertSee('Ready')
+        ->assertSee('Download shelf')
+        ->assertSee('KWh Consumption')
+        ->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+});
