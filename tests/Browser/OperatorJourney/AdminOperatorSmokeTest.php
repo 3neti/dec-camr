@@ -463,3 +463,59 @@ test('operations engineer can review live scada surface in a real browser', func
     'live scada gateways' => ['/gateway', ['Gateway Management', 'Create gateway', 'Existing gateways', 'Gateway Serial Number']],
     'live scada meters' => ['/meter', ['Meter Management', 'Create meter', 'Existing meters', 'Meter Name']],
 ]);
+
+test('analyst can review a selected analytics investigation in a real browser', function () use ($authenticateLegacyBrowserUser, $seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $seedAnalyticsDemoScenario($this);
+
+    $analyst = User::query()
+        ->where('name', 'analyst_demo')
+        ->first();
+
+    expect($analyst)->not->toBeNull();
+
+    $context = DB::table('meter_details')
+        ->join('meter_data', function ($join): void {
+            $join->on('meter_data.meter_id', '=', 'meter_details.meter_id')
+                ->orOn('meter_data.meter_id', '=', 'meter_details.meter_name');
+        })
+        ->join('meter_building_table', function ($join): void {
+            $join->on('meter_building_table.site_idx', '=', 'meter_details.site_idx')
+                ->whereColumn('meter_data.location', 'meter_building_table.building_code');
+        })
+        ->orderBy('meter_building_table.building_code')
+        ->orderBy('meter_details.meter_name')
+        ->select('meter_building_table.building_code', 'meter_details.meter_name')
+        ->first();
+
+    expect($context)->not->toBeNull();
+
+    $authenticateLegacyBrowserUser($this, $analyst);
+
+    $url = sprintf(
+        '/analytics?building=%s&meter=%s&from=2026-07-01&to=2026-07-05&comparison=selected',
+        urlencode((string) $context->building_code),
+        urlencode((string) $context->meter_name),
+    );
+
+    visit($url)
+        ->assertPathIs('/analytics')
+        ->assertSee('Analytics Workbench')
+        ->assertSee('Selected building')
+        ->assertSee('Building')
+        ->assertSee('Meter')
+        ->assertSee('Investigation Window')
+        ->assertSee('Selected Window Consumption')
+        ->assertSee('Peak Demand')
+        ->assertSee('Building Leader')
+        ->assertSee('Consumption Trend')
+        ->assertSee('Demand Curve')
+        ->assertSee('Building Comparison')
+        ->assertSee('Load Profile Explorer')
+        ->assertSee('Evidence Export Panel')
+        ->assertSee('Share URL ready')
+        ->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+});
