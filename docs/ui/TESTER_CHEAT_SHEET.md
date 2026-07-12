@@ -416,7 +416,7 @@ npm install
 npx playwright install chromium
 ```
 
-BT-014 validates the real-browser legacy login, `/site`, `/dashboard`, `/analytics`, first analyst analytics evidence-control smoke path, live SCADA dashboard replay smoke path, gateway recovery dashboard smoke path, live operations command surface smoke path, maintenance CRUD shell smoke path across Company, Division, Site, Building, Gateway, and Meter, mobile viewport smoke for `/site`, `/dashboard`, and `/analytics`, report workflow smoke for SAP, Raw, Site, Consumption, and Demand reports, a Consumption Report export/download-shelf preparation journey, live SCADA dashboard/gateway/meter evidence surfaces, and selected-building analytics investigation state. Deeper multi-step journeys remain covered by feature tests until the browser journey suite is expanded.
+BT-015 validates the real-browser legacy login, `/site`, `/dashboard`, `/analytics`, first analyst analytics evidence-control smoke path, live SCADA dashboard replay smoke path, gateway recovery dashboard smoke path, live operations command surface smoke path, maintenance CRUD shell smoke path across Company, Division, Site, Building, Gateway, and Meter, mobile viewport smoke for `/site`, `/dashboard`, and `/analytics`, report workflow smoke for SAP, Raw, Site, Consumption, and Demand reports, a Consumption Report export/download-shelf preparation journey, live SCADA dashboard/gateway/meter evidence surfaces, selected-building analytics investigation state, and release persona smoke for administrator, operations, analyst, and maintenance users. Deeper multi-step journeys remain covered by feature tests until the browser journey suite is expanded.
 
 ## Cache Clearing / Reset Commands
 

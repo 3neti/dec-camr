@@ -519,3 +519,36 @@ test('analyst can review a selected analytics investigation in a real browser', 
 
     $this->travelBack();
 });
+
+test('demo persona can open primary release surface in a real browser', function (string $userName, string $path, array $visibleText) use ($authenticateLegacyBrowserUser) {
+    config()->set('session.driver', 'file');
+
+    $this->travelTo(CarbonImmutable::create(2026, 7, 1, 8, 0, 0));
+
+    $this->artisan('camr:scenario analytics-demo --anchor="2026-07-01 08:00:00"')
+        ->assertSuccessful();
+
+    $user = User::query()
+        ->where('name', $userName)
+        ->first();
+
+    expect($user)->not->toBeNull();
+
+    $authenticateLegacyBrowserUser($this, $user);
+
+    $page = visit($path)
+        ->assertPathIs($path);
+
+    foreach ($visibleText as $text) {
+        $page->assertSee($text);
+    }
+
+    $page->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+})->with([
+    'administrator operator home' => ['admin', '/site', ['Site Management', 'Existing sites']],
+    'operations dashboard' => ['ops_eng_demo', '/dashboard', ['CAMR Operator Console', 'Gateway Health', 'Meter Health']],
+    'analyst analytics' => ['analyst_demo', '/analytics', ['Analytics Workbench', 'Consumption Trend', 'Evidence Export Panel']],
+    'maintenance site scope' => ['maintenance_demo', '/site', ['Site Management', 'Existing sites']],
+]);
