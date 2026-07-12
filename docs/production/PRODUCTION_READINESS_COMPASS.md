@@ -26,6 +26,20 @@ This compass summarizes production readiness and references existing evidence ra
 | `docs/ui/TESTER_CHEAT_SHEET.md` | Developer, QA, seed, simulator, endpoint, and browser-test operating reference. |
 | `docs/ui/SCADA_SIMULATION_MANUAL.md` | SCADA simulation, replay, and operational review workflows. |
 
+
+## Wave Playbooks
+
+| Wave | Playbook |
+|---|---|
+| PR-001 | `docs/production/PR-001_ENVIRONMENT_DEPLOYMENT_READINESS.md` |
+| PR-002 | `docs/production/PR-002_DATABASE_BACKUP_RESTORE_READINESS.md` |
+| PR-003 | `docs/production/PR-003_SECURITY_ACCESS_READINESS.md` |
+| PR-004 | `docs/production/PR-004_RTU_GATEWAY_INGESTION_READINESS.md` |
+| PR-005 | `docs/production/PR-005_OBSERVABILITY_INCIDENT_RESPONSE.md` |
+| PR-006 | `docs/production/PR-006_PERFORMANCE_LOAD_READINESS.md` |
+| PR-007 | `docs/production/PR-007_BROWSER_OPERATOR_ACCEPTANCE_READINESS.md` |
+| PR-008 | `docs/production/PR-008_PRODUCTION_GO_NO_GO.md` |
+
 ## Readiness Waves
 
 | Wave | Scope | Status | Evidence | Blocking? | Owner | Notes |
