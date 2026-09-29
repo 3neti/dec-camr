@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import type { EChartsOption } from 'echarts';
 import { computed } from 'vue';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import BaseAnalyticsChart from './BaseAnalyticsChart.vue';
+import { baseTooltip, chartGridLineColor, chartTextColor, formatChartNumber } from './charting';
 
 type TrustLevel = 'Measured' | 'Calculated' | 'Estimated' | 'Incomplete' | 'Unknown';
 
@@ -54,7 +57,7 @@ const props = withDefaults(
     },
 );
 
-const formatNumber = (value: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
+const formatNumber = (value: number) => formatChartNumber(value);
 
 const sortedSummaries = computed<RankedSummary[]>(() => {
     const sorted = [...props.summaries].sort((left, right) => right.totalKwh - left.totalKwh);
@@ -74,6 +77,72 @@ const incompleteCount = computed(() => sortedSummaries.value.filter((summary) =>
 const unknownCount = computed(() => sortedSummaries.value.filter((summary) => summary.confidence.level === 'Unknown').length);
 const missingIntervalCount = computed(() => sortedSummaries.value.reduce((total, summary) => total + summary.missingData.missingIntervalCount, 0));
 const hasRows = computed(() => sortedSummaries.value.length > 0);
+
+const chartRows = computed(() => topFiveSummaries.value.slice().reverse());
+const chartOption = computed(() => ({
+    color: ['#10b981'],
+    grid: {
+        top: 18,
+        right: 24,
+        bottom: 24,
+        left: 92,
+        containLabel: true,
+    },
+    tooltip: {
+        ...baseTooltip,
+        trigger: 'axis',
+        axisPointer: {
+            type: 'shadow',
+        },
+        valueFormatter: (value) => `${formatChartNumber(Number(value))} ${props.unit}`,
+    },
+    xAxis: {
+        type: 'value',
+        axisLabel: {
+            color: chartTextColor,
+        },
+        splitLine: {
+            lineStyle: {
+                color: chartGridLineColor,
+            },
+        },
+    },
+    yAxis: {
+        type: 'category',
+        data: chartRows.value.map((summary) => summary.buildingCode),
+        axisLabel: {
+            color: chartTextColor,
+        },
+        axisLine: {
+            lineStyle: {
+                color: chartGridLineColor,
+            },
+        },
+        axisTick: {
+            show: false,
+        },
+    },
+    series: [
+        {
+            name: 'Consumption',
+            type: 'bar',
+            data: chartRows.value.map((summary) => ({
+                value: summary.totalKwh,
+                itemStyle: {
+                    color: summary.rank === 1 ? '#f59e0b' : '#10b981',
+                    borderRadius: [0, 8, 8, 0],
+                },
+            })),
+            barMaxWidth: 24,
+            label: {
+                show: true,
+                position: 'right',
+                formatter: ({ value }) => `${formatChartNumber(Number(value), 1)} ${props.unit}`,
+                color: chartTextColor,
+            },
+        },
+    ],
+}) as EChartsOption);
 
 const displayConfidenceLabel = (level: TrustLevel) => {
     if (level === 'Calculated' || level === 'Measured') {
@@ -105,7 +174,7 @@ const confidenceClasses = (level: TrustLevel) => {
 </script>
 
 <template>
-    <Card class="gap-4 overflow-hidden py-5">
+    <Card class="gap-4 overflow-hidden py-5" data-test="analytics-building-comparison">
         <CardHeader class="gap-3 px-5 pb-0">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div class="space-y-1">
@@ -141,6 +210,14 @@ const confidenceClasses = (level: TrustLevel) => {
                     <p class="mt-1 text-xl font-semibold text-foreground">{{ topSummary?.buildingCode ?? 'Unavailable' }}</p>
                 </div>
             </div>
+
+            <BaseAnalyticsChart
+                v-if="hasRows"
+                test-id="analytics-building-chart"
+                :option="chartOption"
+                :height="260"
+                :ariaLabel="`${props.title}: top ${topFiveSummaries.length} buildings ranked by consumption`"
+            />
 
             <div v-if="hasRows" class="grid gap-3 md:hidden">
                 <article

@@ -118,6 +118,37 @@ test('authenticated admin can open the operator home in a real browser', functio
     $this->travelBack();
 });
 
+test('admin can drill from site to building to gateway to meter readings in a real browser', function () use ($seedAnalyticsDemoScenario) {
+    config()->set('session.driver', 'file');
+
+    $admin = $seedAnalyticsDemoScenario($this);
+
+    $this
+        ->actingAs($admin)
+        ->withSession(['loginID' => $admin->id]);
+
+    visit('/site')
+        ->assertPathIs('/site')
+        ->assertSee('Operator navigation')
+        ->assertSee('Site → Building → Gateway → Meter → Readings')
+        ->click('View buildings')
+        ->assertPathIs('/building')
+        ->assertSee('Building hierarchy')
+        ->click('View gateways')
+        ->assertPathIs('/gateway')
+        ->assertSee('Gateway layer')
+        ->click('View meters')
+        ->assertPathIs('/meter')
+        ->assertSee('Meter layer')
+        ->click('All readings')
+        ->assertPathIs('/analytics')
+        ->assertSee('Analytics Workbench')
+        ->assertSee('Consumption Trend')
+        ->assertNoJavaScriptErrors();
+
+    $this->travelBack();
+});
+
 test('authenticated admin can open dashboard in a real browser', function () use ($seedAnalyticsDemoScenario) {
     config()->set('session.driver', 'file');
 
@@ -185,11 +216,16 @@ test('analyst can review analytics evidence controls in a real browser', functio
         ->assertSee('Selected Window Consumption')
         ->assertSee('Peak Demand')
         ->assertSee('Building Leader')
+        ->assertSee('Visual Analysis')
         ->assertSee('Consumption Trend')
         ->assertSee('Demand Curve')
         ->assertSee('Building Comparison')
         ->assertSee('Load Profile Explorer')
         ->assertSee('Evidence Export Panel')
+        ->assertScript("document.querySelector('[data-test=\"analytics-consumption-chart\"]') !== null", true)
+        ->assertScript("document.querySelector('[data-test=\"analytics-demand-chart\"]') !== null", true)
+        ->assertScript("document.querySelector('[data-test=\"analytics-building-chart\"]') !== null", true)
+        ->assertScript("document.querySelector('[data-test=\"analytics-load-profile-chart\"]') !== null", true)
         ->assertNoJavaScriptErrors();
 
     $this->travelBack();
@@ -407,6 +443,7 @@ test('analyst can prepare a consumption export in a real browser', function () u
 
     $page = visit('/consumption_report')
         ->assertPathIs('/consumption_report')
+        ->assertNoJavaScriptErrors()
         ->assertSee('Consumption Report')
         ->assertSee('Report filters')
         ->assertSee('Download Consumption Export')
@@ -414,17 +451,23 @@ test('analyst can prepare a consumption export in a real browser', function () u
         ->assertSee('No downloads in this session yet')
         ->assertNoJavaScriptErrors();
 
+    $filters = json_encode([
+        'site_id' => (string) $reportMeter->site_idx,
+        'meter_id' => (string) $reportMeter->meter_name,
+        'start_date' => '2026-07-01',
+        'start_time' => '00:00',
+        'end_date' => '2026-07-01',
+        'end_time' => '23:59',
+    ], JSON_THROW_ON_ERROR);
+
+    $page->script("for (const [id, value] of Object.entries({$filters})) { const input = document.getElementById(id); input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); }");
+
+    $page->wait(0.5);
+
+    expect($page->script("document.querySelector('#site_id').value"))->toBe((string) $reportMeter->site_idx);
+    expect($page->script("document.querySelector('#meter_id').value"))->toBe((string) $reportMeter->meter_name);
+
     $page
-        ->fill('#site_id', (string) $reportMeter->site_idx)
-        ->fill('#meter_id', (string) $reportMeter->meter_name)
-        ->fill('#start_date', '2026-07-01')
-        ->fill('#start_time', '00:00')
-        ->fill('#end_date', '2026-07-01')
-        ->fill('#end_time', '23:59')
-        ->wait(0.5)
-        ->assertScript("document.querySelector('#site_id').value", (string) $reportMeter->site_idx)
-        ->assertScript("document.querySelector('#meter_id').value", (string) $reportMeter->meter_name)
-        ->assertSee('Ready')
         ->assertSee('Download shelf')
         ->assertSee('KWh Consumption')
         ->assertNoJavaScriptErrors();
@@ -509,12 +552,17 @@ test('analyst can review a selected analytics investigation in a real browser', 
         ->assertSee('Selected Window Consumption')
         ->assertSee('Peak Demand')
         ->assertSee('Building Leader')
+        ->assertSee('Visual Analysis')
         ->assertSee('Consumption Trend')
         ->assertSee('Demand Curve')
         ->assertSee('Building Comparison')
         ->assertSee('Load Profile Explorer')
         ->assertSee('Evidence Export Panel')
         ->assertSee('Share URL ready')
+        ->assertScript("document.querySelector('[data-test=\"analytics-consumption-chart\"]') !== null", true)
+        ->assertScript("document.querySelector('[data-test=\"analytics-demand-chart\"]') !== null", true)
+        ->assertScript("document.querySelector('[data-test=\"analytics-building-chart\"]') !== null", true)
+        ->assertScript("document.querySelector('[data-test=\"analytics-load-profile-chart\"]') !== null", true)
         ->assertNoJavaScriptErrors();
 
     $this->travelBack();

@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import ContextHeader from '@/components/operator/ContextHeader.vue';
+import DrilldownActions from '@/components/operator/DrilldownActions.vue';
 import EntityForm from '@/components/operator/EntityForm.vue';
 import EntityTable from '@/components/operator/EntityTable.vue';
+import HierarchyBreadcrumb from '@/components/operator/HierarchyBreadcrumb.vue';
 import OperatorPage from '@/components/operator/OperatorPage.vue';
-import { DeleteGateway, gateway_info } from '@/routes';
+import RelationshipCard from '@/components/operator/RelationshipCard.vue';
+import { DeleteGateway, building, gateway_info, meter, site } from '@/routes';
 
 type Gateway = {
     rtu_id: number;
     gateway_sn: string;
     gateway_mac: string;
     gateway_ip: string;
+    site_idx?: number | null;
     site_code: string | null;
+    location_idx?: number | null;
 };
 
 const props = defineProps<{
@@ -20,6 +27,46 @@ const props = defineProps<{
 
 const page = usePage();
 const csrfToken = page.props.csrfToken as string;
+const searchParams = computed(() => new URL(page.url, 'http://camr.local').searchParams);
+const selectedSiteID = computed(() => searchParams.value.get('siteID'));
+const selectedSiteLabel = computed(() => searchParams.value.get('site') ?? 'Selected site');
+const selectedSiteCode = computed(() => searchParams.value.get('siteCode'));
+const selectedBuildingCode = computed(() => searchParams.value.get('buildingCode'));
+const selectedBuildingLabel = computed(() => searchParams.value.get('building') ?? selectedBuildingCode.value ?? 'Selected building');
+
+const gatewayCards = computed(() => props.gateways.filter((gatewayRow) => {
+    if (selectedSiteID.value && gatewayRow.site_idx !== undefined && gatewayRow.site_idx !== null) {
+        return String(gatewayRow.site_idx) === selectedSiteID.value;
+    }
+
+    if (selectedSiteCode.value) {
+        return gatewayRow.site_code === selectedSiteCode.value;
+    }
+
+    return true;
+}));
+
+const gatewayMeta = (gatewayRow: Gateway): string[] => [
+    `Site ${gatewayRow.site_code ?? selectedSiteLabel.value}`,
+    `MAC ${gatewayRow.gateway_mac}`,
+    `IP ${gatewayRow.gateway_ip}`,
+];
+
+const gatewayActions = (gatewayRow: Gateway) => [
+    {
+        label: 'View meters',
+        href: meter.url({
+            query: {
+                gatewaySN: gatewayRow.gateway_sn,
+                site: selectedSiteLabel.value,
+                siteCode: gatewayRow.site_code ?? selectedSiteCode.value ?? '',
+                building: selectedBuildingLabel.value,
+                buildingCode: selectedBuildingCode.value ?? '',
+            },
+        }),
+        primary: true,
+    },
+];
 
 const formFields = [
     {
@@ -52,20 +99,20 @@ const formFields = [
 const columns = [
     {
         key: 'gateway_sn',
-        label: 'Serial',
+        label: 'Gateway',
+    },
+    {
+        key: 'site_code',
+        label: 'Site',
+        render: (value: unknown) => String(value ?? '—'),
+    },
+    {
+        key: 'gateway_ip',
+        label: 'Network',
     },
     {
         key: 'gateway_mac',
         label: 'MAC',
-    },
-    {
-        key: 'gateway_ip',
-        label: 'IP',
-    },
-    {
-        key: 'site_code',
-        label: 'Site Code',
-        render: (value: unknown) => String(value ?? '—'),
     },
 ];
 
@@ -90,34 +137,64 @@ const rowActions = (gatewayRow: Gateway) => [
 
 <template>
     <OperatorPage :title="title">
-        <EntityForm
-            title="Create gateway"
-            description="Keep legacy field names and defaults while modernizing layout."
-            action="/create_gateway_post"
-            :fields="[
-                ...formFields,
-                { id: 'site_code', name: 'site_code', hidden: true, value: 'SITEA' },
-                { id: 'connection_type', name: 'connection_type', hidden: true, value: 'LAN' },
-                { id: 'location_id', name: 'location_id', hidden: true, value: 0 },
-            ]"
-            :csrf-token="csrfToken"
-            grid-class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-            submit-wrapper-class="flex items-end sm:col-span-2 lg:col-span-4"
-        />
+        <div class="space-y-6">
+            <HierarchyBreadcrumb
+                :items="[
+                    { label: 'Sites', href: site.url() },
+                    { label: selectedSiteLabel, href: building.url({ query: { siteID: selectedSiteID ?? '', site: selectedSiteLabel, siteCode: selectedSiteCode ?? '' } }) },
+                    { label: selectedBuildingLabel },
+                ]"
+            />
 
-        <EntityTable
-            title="Existing gateways"
-            description="Current records in the system."
-            :columns="columns"
-            :rows="props.gateways"
-            row-key="rtu_id"
-            :filter-bar="{
-                queryPlaceholder: 'Search serial, MAC, IP, or site code',
-                queryKeys: ['gateway_sn', 'gateway_mac', 'gateway_ip', 'site_code'],
-                scopeKey: 'site_code',
-            }"
-            :row-actions="rowActions"
-            :csrf-token="csrfToken"
-        />
+            <ContextHeader
+                eyebrow="Gateway layer"
+                :title="selectedBuildingCode ? `Gateways for ${selectedBuildingLabel}` : 'Gateways'"
+                description="Open a gateway to inspect the meters posting through it. Network identifiers stay available as secondary context rather than the primary navigation path."
+                :meta="[`${gatewayCards.length} gateways shown`, selectedBuildingCode ? 'Building context selected' : 'Portfolio view']"
+            />
+
+            <section class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3" aria-label="Gateway navigation cards">
+                <RelationshipCard
+                    v-for="gatewayRow in gatewayCards"
+                    :key="gatewayRow.rtu_id"
+                    eyebrow="Gateway"
+                    :title="gatewayRow.gateway_sn"
+                    :description="'Review meters connected through this gateway.'"
+                    :meta="gatewayMeta(gatewayRow)"
+                >
+                    <DrilldownActions :actions="gatewayActions(gatewayRow)" />
+                </RelationshipCard>
+            </section>
+
+            <EntityForm
+                title="Create gateway"
+                description="Keep legacy field names and defaults while modernizing layout."
+                action="/create_gateway_post"
+                :fields="[
+                    ...formFields,
+                    { id: 'site_code', name: 'site_code', hidden: true, value: 'SITEA' },
+                    { id: 'connection_type', name: 'connection_type', hidden: true, value: 'LAN' },
+                    { id: 'location_id', name: 'location_id', hidden: true, value: 0 },
+                ]"
+                :csrf-token="csrfToken"
+                grid-class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                submit-wrapper-class="flex items-end sm:col-span-2 lg:col-span-4"
+            />
+
+            <EntityTable
+                title="Existing gateways"
+                description="Current records in the system. Use View meters for hierarchy navigation."
+                :columns="columns"
+                :rows="gatewayCards"
+                row-key="rtu_id"
+                :filter-bar="{
+                    queryPlaceholder: 'Search serial, MAC, IP, or site code',
+                    queryKeys: ['gateway_sn', 'gateway_mac', 'gateway_ip', 'site_code'],
+                    scopeKey: 'site_code',
+                }"
+                :row-actions="rowActions"
+                :csrf-token="csrfToken"
+            />
+        </div>
     </OperatorPage>
 </template>

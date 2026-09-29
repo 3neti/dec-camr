@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import type { EChartsOption } from 'echarts';
 import { computed } from 'vue';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import BaseAnalyticsChart from './BaseAnalyticsChart.vue';
+import { baseGrid, baseTooltip, categoryAxis, formatChartLabel, formatChartNumber, valueAxis } from './charting';
 
 type TrustLevel = 'Measured' | 'Calculated' | 'Estimated' | 'Incomplete' | 'Unknown';
 
@@ -20,14 +23,6 @@ type ConsumptionSeriesPoint = {
     };
 };
 
-type TrendPoint = ConsumptionSeriesPoint & {
-    index: number;
-    x: number;
-    y: number | null;
-    formattedValue: string;
-    label: string;
-};
-
 const props = withDefaults(
     defineProps<{
         title?: string;
@@ -42,16 +37,11 @@ const props = withDefaults(
         title: 'Consumption Trend',
         description: 'Report-compatible consumption over the selected analytical window.',
         unit: 'kWh',
-        height: 220,
+        height: 280,
         emptyLabel: 'No consumption series points are available for this selection.',
         sourceLabel: 'ConsumptionSeriesPoint',
     },
 );
-
-const chartWidth = 640;
-const chartPadding = 28;
-const usableWidth = chartWidth - chartPadding * 2;
-const usableHeight = computed(() => Math.max(120, props.height - chartPadding * 2));
 
 const calculatedPoints = computed(() => props.points.filter((point) => typeof point.kwhTotal === 'number' && point.confidence.level === 'Calculated'));
 const incompleteCount = computed(() => props.points.filter((point) => point.confidence.level === 'Incomplete').length);
@@ -59,57 +49,39 @@ const unknownCount = computed(() => props.points.filter((point) => point.confide
 const missingIntervalCount = computed(() => props.points.reduce((total, point) => total + (point.missingData?.missingIntervalCount ?? 0), 0));
 const hasRenderableData = computed(() => calculatedPoints.value.length > 0);
 
-const maxValue = computed(() => Math.max(...calculatedPoints.value.map((point) => point.kwhTotal ?? 0), 1));
-const minValue = computed(() => Math.min(...calculatedPoints.value.map((point) => point.kwhTotal ?? 0), 0));
-const valueRange = computed(() => Math.max(maxValue.value - minValue.value, 1));
+const chartLabels = computed(() => props.points.map((point) => formatChartLabel(point.periodStart)));
+const chartValues = computed(() => props.points.map((point) => point.confidence.level === 'Calculated' ? point.kwhTotal : null));
 
-const formatNumber = (value: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
-const formatLabel = (value: string) => new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-}).format(new Date(value));
-
-const trendPoints = computed<TrendPoint[]>(() => props.points.map((point, index) => {
-    const x = props.points.length > 1
-        ? chartPadding + (index / (props.points.length - 1)) * usableWidth
-        : chartWidth / 2;
-    const y = typeof point.kwhTotal === 'number' && point.confidence.level === 'Calculated'
-        ? chartPadding + ((maxValue.value - point.kwhTotal) / valueRange.value) * usableHeight.value
-        : null;
-
-    return {
-        ...point,
-        index,
-        x,
-        y,
-        formattedValue: typeof point.kwhTotal === 'number' ? `${formatNumber(point.kwhTotal)} ${props.unit}` : 'Unavailable',
-        label: formatLabel(point.periodStart),
-    };
+const chartOption = computed<EChartsOption>(() => ({
+    color: ['#059669'],
+    grid: baseGrid,
+    tooltip: {
+        ...baseTooltip,
+        valueFormatter: (value: unknown) => `${formatChartNumber(Number(value))} ${props.unit}`,
+    },
+    xAxis: categoryAxis(chartLabels.value),
+    yAxis: valueAxis(props.unit),
+    series: [
+        {
+            name: 'Consumption',
+            type: 'line',
+            data: chartValues.value,
+            smooth: true,
+            connectNulls: false,
+            showSymbol: true,
+            symbolSize: 7,
+            lineStyle: {
+                width: 3,
+            },
+            areaStyle: {
+                color: 'rgba(5, 150, 105, 0.14)',
+            },
+            emphasis: {
+                focus: 'series',
+            },
+        },
+    ],
 }));
-
-const linePath = computed(() => trendPoints.value
-    .filter((point) => point.y !== null)
-    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${(point.y ?? 0).toFixed(2)}`)
-    .join(' '));
-
-const areaPath = computed(() => {
-    const renderablePoints = trendPoints.value.filter((point) => point.y !== null);
-
-    if (renderablePoints.length === 0) {
-        return '';
-    }
-
-    const baseline = chartPadding + usableHeight.value;
-    const line = renderablePoints
-        .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${(point.y ?? 0).toFixed(2)}`)
-        .join(' ');
-    const first = renderablePoints[0];
-    const last = renderablePoints[renderablePoints.length - 1];
-
-    return `${line} L ${last.x.toFixed(2)} ${baseline.toFixed(2)} L ${first.x.toFixed(2)} ${baseline.toFixed(2)} Z`;
-});
 
 const totalKwh = computed(() => calculatedPoints.value.reduce((total, point) => total + (point.kwhTotal ?? 0), 0));
 const averageKwh = computed(() => calculatedPoints.value.length > 0 ? totalKwh.value / calculatedPoints.value.length : null);
@@ -155,7 +127,7 @@ const confidenceClasses = computed(() => {
 </script>
 
 <template>
-    <Card class="gap-4 overflow-hidden py-5">
+    <Card class="gap-4 overflow-hidden py-5" data-test="analytics-consumption-trend">
         <CardHeader class="gap-3 px-5 pb-0">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div class="space-y-1">
@@ -185,65 +157,29 @@ const confidenceClasses = computed(() => {
             <div class="grid gap-3 md:grid-cols-3">
                 <div class="rounded-xl border bg-background/70 p-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</p>
-                    <p class="mt-1 text-xl font-semibold text-foreground">{{ formatNumber(totalKwh) }} {{ props.unit }}</p>
+                    <p class="mt-1 text-xl font-semibold text-foreground">{{ formatChartNumber(totalKwh) }} {{ props.unit }}</p>
                 </div>
                 <div class="rounded-xl border bg-background/70 p-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Average</p>
                     <p class="mt-1 text-xl font-semibold text-foreground">
-                        {{ averageKwh === null ? 'Unavailable' : `${formatNumber(averageKwh)} ${props.unit}` }}
+                        {{ averageKwh === null ? 'Unavailable' : `${formatChartNumber(averageKwh)} ${props.unit}` }}
                     </p>
                 </div>
                 <div class="rounded-xl border bg-background/70 p-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Peak Window</p>
                     <p class="mt-1 text-xl font-semibold text-foreground">
-                        {{ peakPoint?.kwhTotal === undefined || peakPoint?.kwhTotal === null ? 'Unavailable' : `${formatNumber(peakPoint.kwhTotal)} ${props.unit}` }}
+                        {{ peakPoint?.kwhTotal === undefined || peakPoint?.kwhTotal === null ? 'Unavailable' : `${formatChartNumber(peakPoint.kwhTotal)} ${props.unit}` }}
                     </p>
                 </div>
             </div>
 
-            <div v-if="hasRenderableData" class="rounded-2xl border bg-background/70 p-4">
-                <svg
-                    class="h-auto w-full overflow-visible"
-                    :viewBox="`0 0 ${chartWidth} ${props.height}`"
-                    role="img"
-                    :aria-label="`${props.title}: ${trendPoints.length} consumption points`"
-                >
-                    <line
-                        :x1="chartPadding"
-                        :x2="chartWidth - chartPadding"
-                        :y1="chartPadding + usableHeight"
-                        :y2="chartPadding + usableHeight"
-                        class="stroke-muted"
-                        stroke-width="1"
-                    />
-                    <path v-if="areaPath" :d="areaPath" class="fill-emerald-500/10" />
-                    <path v-if="linePath" :d="linePath" class="fill-none stroke-emerald-600 dark:stroke-emerald-400" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-
-                    <g v-for="point in trendPoints" :key="`${point.periodStart}-${point.index}`">
-                        <circle
-                            v-if="point.y !== null"
-                            :cx="point.x"
-                            :cy="point.y"
-                            r="4"
-                            class="fill-background stroke-emerald-600 dark:stroke-emerald-400"
-                            stroke-width="2"
-                        />
-                        <circle
-                            v-else
-                            :cx="point.x"
-                            :cy="chartPadding + usableHeight"
-                            r="3"
-                            class="fill-amber-500"
-                        />
-                        <title>{{ point.label }}: {{ point.formattedValue }} ({{ point.confidence.level }})</title>
-                    </g>
-                </svg>
-
-                <div class="mt-3 flex flex-wrap justify-between gap-3 text-xs text-muted-foreground">
-                    <span>{{ trendPoints[0]?.label }}</span>
-                    <span>{{ trendPoints[trendPoints.length - 1]?.label }}</span>
-                </div>
-            </div>
+            <BaseAnalyticsChart
+                v-if="hasRenderableData"
+                test-id="analytics-consumption-chart"
+                :option="chartOption"
+                :height="props.height"
+                :ariaLabel="`${props.title}: ${calculatedPoints.length} calculated consumption points`"
+            />
 
             <div v-else class="rounded-2xl border border-dashed bg-muted/30 p-6 text-center">
                 <p class="text-sm font-medium text-foreground">{{ props.emptyLabel }}</p>

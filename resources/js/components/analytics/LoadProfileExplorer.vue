@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import type { EChartsOption } from 'echarts';
 import { computed } from 'vue';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import BaseAnalyticsChart from './BaseAnalyticsChart.vue';
+import { baseGrid, baseTooltip, categoryAxis, formatChartLabel, formatChartNumber, valueAxis } from './charting';
 import ConsumptionTrend from './ConsumptionTrend.vue';
 import DemandCurve from './DemandCurve.vue';
 
@@ -104,10 +107,78 @@ const investigationSteps = computed(() => [
         active: hasDemand.value,
     },
 ]);
+
+const chartLabels = computed(() => {
+    const labels = new Set<string>();
+
+    props.consumptionPoints.forEach((point) => labels.add(formatChartLabel(point.periodStart)));
+    props.demandPoints.forEach((point) => labels.add(formatChartLabel(point.periodStart)));
+
+    return [...labels];
+});
+
+const consumptionByLabel = computed(() => new Map(props.consumptionPoints.map((point) => [formatChartLabel(point.periodStart), point.confidence.level === 'Calculated' ? point.kwhTotal : null])));
+const demandByLabel = computed(() => new Map(props.demandPoints.map((point) => [formatChartLabel(point.periodStart), point.confidence.level === 'Calculated' ? point.kwDemand : null])));
+
+const combinedChartOption = computed(() => ({
+    color: ['#059669', '#0284c7'],
+    grid: baseGrid,
+    tooltip: baseTooltip,
+    legend: {
+        top: 0,
+        right: 0,
+        textStyle: {
+            color: '#64748b',
+        },
+    },
+    xAxis: categoryAxis(chartLabels.value),
+    yAxis: [
+        valueAxis('kWh'),
+        {
+            ...valueAxis('kW'),
+            splitLine: {
+                show: false,
+            },
+        },
+    ],
+    series: [
+        {
+            name: 'Consumption',
+            type: 'line',
+            data: chartLabels.value.map((label) => consumptionByLabel.value.get(label) ?? null),
+            yAxisIndex: 0,
+            smooth: true,
+            showSymbol: false,
+            lineStyle: {
+                width: 3,
+            },
+            areaStyle: {
+                color: 'rgba(5, 150, 105, 0.10)',
+            },
+            tooltip: {
+                valueFormatter: (value: number) => `${formatChartNumber(value)} kWh`,
+            },
+        },
+        {
+            name: 'Demand',
+            type: 'line',
+            data: chartLabels.value.map((label) => demandByLabel.value.get(label) ?? null),
+            yAxisIndex: 1,
+            smooth: true,
+            showSymbol: false,
+            lineStyle: {
+                width: 3,
+            },
+            tooltip: {
+                valueFormatter: (value: number) => `${formatChartNumber(value)} kW`,
+            },
+        },
+    ],
+}) as EChartsOption);
 </script>
 
 <template>
-    <section class="space-y-5" aria-labelledby="analytics-load-profile-title">
+    <section class="space-y-5" aria-labelledby="analytics-load-profile-title" data-test="analytics-load-profile-explorer">
         <Card class="gap-4 overflow-hidden py-5">
             <CardHeader class="gap-3 px-5 pb-0">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -143,6 +214,14 @@ const investigationSteps = computed(() => [
                         </p>
                     </article>
                 </div>
+
+                <BaseAnalyticsChart
+                    v-if="hasAnySeries"
+                    test-id="analytics-load-profile-chart"
+                    :option="combinedChartOption"
+                    :height="320"
+                    :ariaLabel="`${props.title}: combined consumption and demand profile`"
+                />
 
                 <div v-if="incompleteConsumptionCount > 0 || incompleteDemandCount > 0 || unknownConsumptionCount > 0 || unknownDemandCount > 0 || missingIntervalCount > 0" class="rounded-xl border bg-background/70 p-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Profile Evidence</p>

@@ -647,18 +647,32 @@ const scopeTone = computed(() => {
                             />
                         </div>
 
-                        <div class="grid gap-5 xl:grid-cols-2">
-                            <ConsumptionTrend
-                                :points="props.contractData.consumptionPoints"
-                                title="Consumption Trend"
-                                description="Hourly consumption series for the selected analytical context."
-                            />
-                            <DemandCurve
-                                :points="props.contractData.demandPoints"
-                                title="Demand Curve"
-                                description="Hourly demand series with peak markers for the selected analytical context."
-                            />
-                        </div>
+                        <section class="space-y-4" aria-labelledby="analytics-visual-analysis-title">
+                            <div class="rounded-3xl border bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-5 text-white shadow-sm">
+                                <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-emerald-200/80">
+                                    Visual Analysis
+                                </p>
+                                <h2 id="analytics-visual-analysis-title" class="mt-2 text-2xl font-semibold tracking-tight">
+                                    See the shape of consumption, demand, and building load.
+                                </h2>
+                                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-200">
+                                    These charts are generated from the same contract-backed evidence as the summaries below. They do not use fake Vue values or separate report formulas.
+                                </p>
+                            </div>
+
+                            <div class="grid gap-5 xl:grid-cols-2">
+                                <ConsumptionTrend
+                                    :points="props.contractData.consumptionPoints"
+                                    title="Consumption Trend"
+                                    description="Hourly consumption series for the selected analytical context."
+                                />
+                                <DemandCurve
+                                    :points="props.contractData.demandPoints"
+                                    title="Demand Curve"
+                                    description="Hourly demand series with peak markers for the selected analytical context."
+                                />
+                            </div>
+                        </section>
 
                         <BuildingComparisonGrid
                             :summaries="props.contractData.buildingSummaries"
