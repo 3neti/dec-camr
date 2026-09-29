@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -20,8 +21,15 @@ return new class extends Migration
             $table->string('access_list_src')->nullable();
 
             $table->index('site_idx');
-            $table->index(['user_idx', 'site_idx']);
         });
+
+        if (in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            DB::statement('CREATE INDEX user_access_group_user_idx_site_idx_index ON user_access_group (user_idx(191), site_idx)');
+        } else {
+            Schema::table('user_access_group', function (Blueprint $table): void {
+                $table->index(['user_idx', 'site_idx']);
+            });
+        }
     }
 
     public function down(): void
