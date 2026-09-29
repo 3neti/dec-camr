@@ -161,7 +161,7 @@ return [
     */
 
     'features' => [
-        ...(filter_var(env('CAMR_WALKTHROUGH_ACCESS_ENABLED', false), FILTER_VALIDATE_BOOL) ? [] : [Features::registration()]),
+        Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([

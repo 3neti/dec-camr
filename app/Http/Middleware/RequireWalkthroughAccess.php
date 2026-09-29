@@ -25,6 +25,10 @@ class RequireWalkthroughAccess
         if ($username !== '' && $password !== ''
             && hash_equals($username, (string) $request->getUser())
             && hash_equals($password, (string) $request->getPassword())) {
+            if ($request->is('register')) {
+                return response('', 404);
+            }
+
             return $next($request);
         }
 

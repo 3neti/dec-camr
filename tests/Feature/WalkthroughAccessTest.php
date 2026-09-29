@@ -32,3 +32,17 @@ test('walkthrough credentials allow the application login', function () {
 
     $this->withBasicAuth('preview', 'secret')->get('/')->assertOk();
 });
+
+test('walkthrough credentials do not allow self registration', function (string $method) {
+    config()->set('camr.walkthrough_access.enabled', true);
+    config()->set('camr.walkthrough_access.username', 'preview');
+    config()->set('camr.walkthrough_access.password', 'secret');
+
+    $this->withBasicAuth('preview', 'secret');
+
+    if ($method === 'GET') {
+        $this->get('/register')->assertNotFound();
+    } else {
+        $this->post('/register')->assertNotFound();
+    }
+})->with(['GET', 'POST']);
